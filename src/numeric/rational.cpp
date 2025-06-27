@@ -26,7 +26,10 @@ Rational &operator*=(Rational &base, const Rational &mod) {
 }
 Rational &operator/=(Rational &base, const Rational &mod) {
   base.num_ *= mod.den_;
-  base.den_ *= mod.num_;
+  base.den_ *= std::abs(mod.num_);
+  if (mod.num_ < 0) {
+    base.num_ = -base.num_;
+  }
   base.Normalize();
   return base;
 }
@@ -84,9 +87,13 @@ bool operator!=(const Rational &first, const Rational &second) {
 }
 
 std::ostream &operator<<(std::ostream &out, const Rational &number) {
-  return out << number.num_ << '/' << number.den_;
+  out << number.num_;
+  if (number.den_ != 1u) {
+    out << '/' << number.den_;
+  }
+  return out;
 }
-std::istream &operator>>(std::istream &in, Rational &number) {
+std::istream &operator>>(std::istream &in, Rational &number) try {
   std::string input;
   in >> input;
   size_t sep = input.find('/');
@@ -96,9 +103,25 @@ std::istream &operator>>(std::istream &in, Rational &number) {
     number.Normalize();
     return in;
   }
+  sep = input.find('.');
+  if (sep < input.size()) {
+    std::istringstream(input.substr(0, sep)) >> number.num_;
+    number.den_ = 1u;
+    for (size_t i = 0; i < input.size() - sep - 1; i++) {
+      number.num_ *= 10;
+      number.den_ *= 10;
+    }
+    uint64_t leftover = 0u;
+    std::istringstream(input.substr(sep + 1, input.size())) >> leftover;
+    number.num_ += static_cast<int64_t>(leftover) * (input[0] == '-' ? -1 : 1);
+    number.Normalize();
+    return in;
+  }
   std::istringstream(input) >> number.num_;
   number.den_ = 1u;
   return in;
+} catch (...) {
+  throw InvalidRationalString();
 }
 
 void Rational::Normalize() {
@@ -108,8 +131,9 @@ void Rational::Normalize() {
   if (this->den_ == 0u) {
     throw InvalidRational();
   }
-  uint64_t gcd = std::gcd(this->num_, this->den_);
-  this->num_ /= gcd;
+  uint64_t gcd =
+      std::gcd(static_cast<uint64_t>(std::abs(this->num_)), this->den_);
+  this->num_ /= static_cast<int64_t>(gcd);
   this->den_ /= gcd;
   return;
 }

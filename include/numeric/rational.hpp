@@ -7,6 +7,11 @@ private:
   std::string message_ = "Denominator can't be 0";
 };
 
+class InvalidRationalString : public MachineError {
+private:
+  std::string message_ = "Invalid Rational String";
+};
+
 class Rational {
 public:
   const int64_t &Num() const;
