@@ -3,6 +3,7 @@ enable_testing()
 include(GoogleTest)
 
 add_subdirectory(numeric)
+add_subdirectory(solvercore)
 
 add_library(GTest_core INTERFACE)
 target_link_libraries(GTest_core INTERFACE

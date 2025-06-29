@@ -1,83 +1,193 @@
+#include "definitions.hpp"
 #include <iostream>
 #include <sstream>
 #include <vector>
 
+class MatrixOutOfRange : public MachineError {
+public:
+  MatrixOutOfRange(size_t range, size_t reference) {
+    message_ =
+        (std::ostringstream() << "Matrix has " << range << " range but element "
+                              << reference << " was referenced")
+            .str();
+  }
+
+  [[nodiscard]] const char *what() const noexcept override {
+    return message_.c_str();
+  }
+
+private:
+  std::string message_;
+};
+
+class InvalidMatrixBase : public MachineError {
+private:
+  std::string message_ = "Vector used for Matrix construction is invalid";
+};
+
 template <class Numeric> class Matrix {
+public:
+  Matrix() : contents_(), rows_(0), cols_(0) {}
+
   Matrix(size_t rows, size_t cols) {
-    contents_ = std::vector(std::vector(Numeric(0), cols), rows);
-    rows_ = contents_.size();
-    cols_ = contents_[0].size();
+    contents_ = std::vector(rows, std::vector(cols, Numeric(0)));
+    rows_ = rows;
+    cols_ = cols;
   }
 
-  Matrix(std::vector<std::vector<Numeric>> &&cont)
-      : contents_(std::forward(cont)) {
+  explicit Matrix(std::vector<std::vector<Numeric>> &&cont)
+      : contents_(std::move(cont)) {
     rows_ = contents_.size();
-    cols_ = contents_[0].size();
+    if (rows_ > 0) {
+      cols_ = contents_[0].size();
+    } else {
+      cols_ = 0;
+    }
+    ContentsValidityCheck();
+  }
+  explicit Matrix(const std::vector<std::vector<Numeric>> &cont)
+      : contents_(cont) {
+    rows_ = contents_.size();
+    if (rows_ > 0) {
+      cols_ = contents_[0].size();
+    } else {
+      cols_ = 0;
+    }
+    ContentsValidityCheck();
   }
 
-  Matrix(Matrix<Numeric> &&source) {
+  Matrix(Matrix<Numeric> &&source) noexcept {
     contents_ = std::move(source.contents_);
-    rows_ = contents_.size();
-    cols_ = contents_[0].size();
+    rows_ = source.rows_;
+    cols_ = source.cols_;
+    source = Matrix();
   }
 
   Matrix(const Matrix<Numeric> &source) {
     contents_ = source.contents_;
+    rows_ = source.rows_;
+    cols_ = source.cols_;
+  }
+
+  static Matrix<Numeric> Eye(const Numeric &value, size_t size) {
+    Matrix<Numeric> identity(size, size);
+    for (size_t i = 0; i < size; i++) {
+      identity.contents_[i][i] = value;
+    }
+    return identity;
+  }
+
+  Matrix<Numeric> &operator=(const Matrix<Numeric> &other) {
+    contents_ = other.contents_;
     rows_ = contents_.size();
-    cols_ = contents_[0].size();
+    if (!contents_.empty()) {
+      cols_ = contents_[0].size();
+    }
+    return *this;
+  }
+  Matrix<Numeric> &operator=(Matrix<Numeric> &&other) noexcept {
+    contents_ = std::move(other.contents_);
+    rows_ = contents_.size();
+    if (!contents_.empty()) {
+      cols_ = contents_[0].size();
+    }
+    return *this;
   }
 
   void SwapRows(size_t row1, size_t row2) {
+    if (row1 >= rows_ || row2 >= rows_) {
+      throw MatrixOutOfRange(rows_, std::max(row1, row2));
+    }
     contents_[row1].swap(contents_[row2]);
   }
 
   void AddRow(size_t source, size_t target, const Numeric &mult) {
+    if (source >= rows_ || target >= rows_) {
+      throw MatrixOutOfRange(rows_, std::max(source, target));
+    }
     for (size_t col = 0; col < cols_; col++) {
-      contents_[target] += contents_[source] * mult;
+      contents_[target][col] += contents_[source][col] * mult;
     }
   }
 
   void MultRow(size_t row, Numeric mult) {
+    if (row >= rows_) {
+      throw MatrixOutOfRange(rows_, row);
+    }
     for (size_t col = 0; col < cols_; col++) {
       contents_[row][col] *= mult;
     }
   }
 
   void SwapCols(size_t col1, size_t col2) {
+    if (col1 >= cols_ || col2 >= cols_) {
+      throw MatrixOutOfRange(cols_, std::max(col1, col2));
+    }
     for (size_t row = 0; row < rows_; row++) {
       std::swap(contents_[row][col1], contents_[row][col2]);
     }
   }
 
   void AddCol(size_t source, size_t target, const Numeric &mult) {
+    if (source >= cols_ || target >= cols_) {
+      throw MatrixOutOfRange(cols_, std::max(source, target));
+    }
     for (size_t row = 0; row < rows_; row++) {
       contents_[row][target] += contents_[row][source] * mult;
     }
   }
 
   void MultCol(size_t col, const Numeric &mult) {
+    if (col >= cols_) {
+      throw MatrixOutOfRange(cols_, col);
+    }
     for (size_t row = 0; row < rows_; row++) {
       contents_[row][col] *= mult;
     }
   }
 
-  Numeric &operator()(size_t row, size_t col) { return contents_[row][col]; }
+  Numeric &operator()(size_t row, size_t col) {
+    if (row >= rows_) {
+      throw MatrixOutOfRange(rows_, row);
+    }
+    if (col >= cols_) {
+      throw MatrixOutOfRange(cols_, col);
+    }
+    return contents_[row][col];
+  }
   const Numeric &operator()(size_t row, size_t col) const {
+    if (row >= rows_) {
+      throw MatrixOutOfRange(rows_, row);
+    }
+    if (col >= cols_) {
+      throw MatrixOutOfRange(cols_, col);
+    }
     return contents_[row][col];
   }
 
-  size_t Rows() const { return rows_; }
-  size_t Cols() const { return cols_; }
+  size_t Rows() const noexcept { return rows_; }
+  size_t Cols() const noexcept { return cols_; }
 
 private:
   std::vector<std::vector<Numeric>> contents_;
   size_t rows_;
   size_t cols_;
+
+  void ContentsValidityCheck() {
+    if (rows_ == 0) {
+      return;
+    }
+    for (const auto &row : contents_) {
+      if (row.size() != cols_) {
+        throw InvalidMatrixBase();
+      }
+    }
+  }
 };
 
 template <class Numeric>
 std::ostream &operator<<(std::ostream &out, const Matrix<Numeric> &matrix) {
-  size_t lengths[matrix.Cols()]{};
+  std::vector<size_t> lengths(matrix.Cols());
   for (size_t col = 0; col < matrix.Cols(); col++) {
     for (size_t row = 0; row < matrix.Rows(); row++) {
       lengths[col] =
@@ -86,16 +196,16 @@ std::ostream &operator<<(std::ostream &out, const Matrix<Numeric> &matrix) {
     }
   }
   for (size_t row = 0; row < matrix.Rows(); ++row) {
-    std::cout << "| ";
+    out << "| ";
     for (size_t col = 0; col < matrix.Cols(); ++col) {
-      std::cout
-          << matrix(row, col)
+      out << matrix(row, col)
           << std::string(
                  lengths[col] -
                      (std::ostringstream() << matrix(row, col)).str().size() +
                      1,
                  ' ');
     }
-    std::cout << "|\n";
+    out << "|\n";
   }
+  return out;
 }
