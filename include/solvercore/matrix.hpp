@@ -97,6 +97,8 @@ public:
     if (!contents_.empty()) {
       cols_ = contents_[0].size();
     }
+    other.rows_ = 0;
+    other.cols_ = 0;
     return *this;
   }
 
@@ -173,6 +175,8 @@ public:
 
   size_t Rows() const noexcept { return rows_; }
   size_t Cols() const noexcept { return cols_; }
+
+  bool Empty() const noexcept { return rows_ == 0; }
 
 private:
   std::vector<std::vector<Numeric>> contents_;

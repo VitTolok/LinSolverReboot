@@ -11,7 +11,21 @@ private:
   std::string message_ = "Vectors have to be the same length";
 };
 
+class VectorOutOfRange : public MachineError {
+public:
+  VectorOutOfRange(size_t range, size_t reference) {
+    message_ =
+        (std::ostringstream() << "Vector has " << range << " coords but coord "
+                              << reference << " was referenced")
+            .str();
+  }
+
+private:
+  std::string message_;
+};
+
 template <class Numeric> class Vector {
+public:
   Vector() : coords_() {}
   explicit Vector(size_t size) : coords_(size) {}
 
@@ -32,6 +46,9 @@ template <class Numeric> class Vector {
   Vector(const Vector<Numeric> &other) : coords_(other.coords_) {}
   Vector(Vector<Numeric> &&other) : coords_(std::move(other.coords_)) {}
 
+  explicit Vector(const std::vector<Numeric> &source) : coords_(source) {}
+  explicit Vector(std::vector<Numeric> &&source) : coords_(std::move(source)) {}
+
   Vector &operator=(const Vector<Numeric> &other) {
     coords_ = other.coords_;
     return *this;
@@ -41,13 +58,16 @@ template <class Numeric> class Vector {
     return *this;
   }
 
-  static std::vector<Vector> MatrixToMany(const Matrix &matrix) {
-    std::vector<Vector> vectors(matrix.Cols(), Vector<Numeric>(matrix.Rows()));
+  static std::vector<Vector<Numeric>>
+  MatrixToMany(const Matrix<Numeric> &matrix) {
+    std::vector<Vector<Numeric>> vectors(matrix.Cols(),
+                                         Vector<Numeric>(matrix.Rows()));
     for (size_t row = 0; row < matrix.Rows(); row++) {
       for (size_t col = 0; col < matrix.Cols(); col++) {
         vectors[col].coords_[row] = matrix(row, col);
       }
     }
+    return vectors;
   }
 
   explicit operator Matrix<Numeric>() const {
@@ -58,10 +78,20 @@ template <class Numeric> class Vector {
     return matrix;
   }
 
-  Numeric &operator[](size_t index) { return coords_[i]; }
-  const Numeric &operator[](size_t index) const { return coords_[i]; }
+  Numeric &operator[](size_t index) {
+    if (index >= coords_.size()) {
+      throw VectorOutOfRange(coords_.size(), index);
+    }
+    return coords_[index];
+  }
+  const Numeric &operator[](size_t index) const {
+    if (index >= coords_.size()) {
+      throw VectorOutOfRange(coords_.size(), index);
+    }
+    return coords_[index];
+  }
 
-  size_t Size() const { return coords_.size(); }
+  size_t Size() const noexcept { return coords_.size(); }
 
   Vector &operator+=(const Vector &other) {
     if (coords_.size() != other.coords_.size()) {
@@ -124,6 +154,8 @@ template <class Numeric> class Vector {
   }
 
   bool operator!=(const Vector &other) const { return !(*this == other); }
+
+  bool Empty() const noexcept { return coords_.empty(); }
 
 private:
   std::vector<Numeric> coords_;
