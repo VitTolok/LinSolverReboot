@@ -211,3 +211,155 @@ TEST_F(OperatorTests, AssignmentOperatorTest) {
     }
   }
 }
+
+TEST_F(OperatorTests, AccessOperatorTest) {
+  for (size_t i = 0; i < 64; i++) {
+    const auto source = Vector(RandomVector());
+    const auto immut = source;
+    auto mut = source;
+    for (size_t i = 0; i < source.Size(); i++) {
+      ASSERT_EQ(source[i], immut[i]);
+      ASSERT_EQ(mut[i], immut[i]);
+    }
+    for (size_t i = 0; i < 64; i++) {
+      size_t index = dist(rng) % source.Size();
+      int64_t value = dist(rng) % 1'000'000'000;
+      ASSERT_NO_THROW(mut[index] = value);
+      ASSERT_EQ(mut[index], value);
+    }
+  }
+}
+
+TEST_F(OperatorTests, OperatorAddAssTest) {
+  for (size_t i = 0; i < 64; i++) {
+    const size_t size = dist(rng) % 100;
+    const auto first = Vector(RandomVector(size));
+    const auto second = Vector(RandomVector(size));
+    auto copy = first;
+    ASSERT_EQ(&copy, &(copy += second));
+    ASSERT_EQ(copy.Size(), size);
+    for (size_t i = 0; i < size; i++) {
+      ASSERT_EQ(copy[i], first[i] + second[i]);
+    }
+    while (copy.Size() == second.Size()) {
+      copy = Vector(RandomVector());
+    }
+    ASSERT_THROW(copy += second, InvalidVectorOperation);
+  }
+}
+TEST_F(OperatorTests, OperatorSubAssTest) {
+  for (size_t i = 0; i < 64; i++) {
+    const size_t size = dist(rng) % 100;
+    const auto first = Vector(RandomVector(size));
+    const auto second = Vector(RandomVector(size));
+    auto copy = first;
+    ASSERT_EQ(&copy, &(copy -= second));
+    ASSERT_EQ(copy.Size(), size);
+    for (size_t i = 0; i < size; i++) {
+      ASSERT_EQ(copy[i], first[i] - second[i]);
+    }
+    while (copy.Size() == second.Size()) {
+      copy = Vector(RandomVector());
+    }
+    ASSERT_THROW(copy -= second, InvalidVectorOperation);
+  }
+}
+TEST_F(OperatorTests, OperatorMulAssTest) {
+  for (size_t i = 0; i < 64; i++) {
+    const auto first = Vector(RandomVector());
+    const int64_t mul = dist(rng) % 1'000'000'000 - 500'000'000;
+    auto copy = first;
+    ASSERT_EQ(&copy, &(copy *= mul));
+    ASSERT_EQ(copy.Size(), first.Size());
+    for (size_t i = 0; i < first.Size(); i++) {
+      ASSERT_EQ(copy[i], first[i] * mul);
+    }
+  }
+}
+TEST_F(OperatorTests, OperatorDivAssTest) {
+  for (size_t i = 0; i < 64; i++) {
+    const auto first = Vector(RandomVector());
+    const int64_t div = dist(rng) % 1'000'000'000 - 500'000'000;
+    auto copy = first;
+    ASSERT_EQ(&copy, &(copy /= div));
+    ASSERT_EQ(copy.Size(), first.Size());
+    for (size_t i = 0; i < first.Size(); i++) {
+      ASSERT_EQ(copy[i], first[i] / div);
+    }
+  }
+}
+
+TEST_F(OperatorTests, OperatorAddTest) {
+  for (size_t i = 0; i < 64; i++) {
+    const size_t size = dist(rng) % 100;
+    const auto first = Vector(RandomVector(size));
+    auto second = Vector(RandomVector(size));
+    auto sum = first + std::as_const(second);
+    ASSERT_EQ(sum.Size(), size);
+    for (size_t i = 0; i < size; i++) {
+      ASSERT_EQ(sum[i], first[i] + second[i]);
+    }
+    while (second.Size() == size) {
+      second = Vector(RandomVector());
+    }
+    ASSERT_THROW(first + second, InvalidVectorOperation);
+  }
+}
+TEST_F(OperatorTests, OperatorSubTest) {
+  for (size_t i = 0; i < 64; i++) {
+    const size_t size = dist(rng) % 100;
+    const auto first = Vector(RandomVector(size));
+    auto second = Vector(RandomVector(size));
+    auto diff = first - std::as_const(second);
+    ASSERT_EQ(diff.Size(), size);
+    for (size_t i = 0; i < size; i++) {
+      ASSERT_EQ(diff[i], first[i] - second[i]);
+    }
+    while (second.Size() == size) {
+      second = Vector(RandomVector());
+    }
+    ASSERT_THROW(first - second, InvalidVectorOperation);
+  }
+}
+TEST_F(OperatorTests, OperatorMulTest) {
+  for (size_t i = 0; i < 64; i++) {
+    const int64_t mul = dist(rng) % 100;
+    const auto first = Vector(RandomVector());
+    auto prod = first * mul;
+    ASSERT_EQ(prod.Size(), first.Size());
+    for (size_t i = 0; i < first.Size(); i++) {
+      ASSERT_EQ(prod[i], first[i] * mul);
+    }
+  }
+}
+TEST_F(OperatorTests, OperatorDivTest) {
+  for (size_t i = 0; i < 64; i++) {
+    const int64_t div = dist(rng) % 100;
+    const auto first = Vector(RandomVector());
+    auto prod = first / div;
+    ASSERT_EQ(prod.Size(), first.Size());
+    for (size_t i = 0; i < first.Size(); i++) {
+      ASSERT_EQ(prod[i], first[i] / div);
+    }
+  }
+}
+
+TEST_F(OperatorTests, OperatorEqTest) {
+  for (size_t i = 0; i < 64; i++) {
+    {
+      const auto first = Vector(RandomVector());
+      auto second = Vector(RandomVector());
+      while (second.Size() == first.Size()) {
+        second = Vector(RandomVector());
+      }
+      ASSERT_FALSE(first == second);
+    }
+    {
+      const auto first = Vector(RandomVector());
+      auto second = first;
+      ASSERT_TRUE(first == second);
+      second[dist(rng) % second.Size()]++;
+      ASSERT_FALSE(first == second);
+    }
+  }
+}
