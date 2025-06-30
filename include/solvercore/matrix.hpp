@@ -1,3 +1,4 @@
+#pragma once
 #include "definitions.hpp"
 #include <iostream>
 #include <sstream>
@@ -23,6 +24,11 @@ private:
 class InvalidMatrixBase : public MachineError {
 private:
   std::string message_ = "Vector used for Matrix construction is invalid";
+};
+
+class InvalidMatrixString : public MachineError {
+private:
+  std::string message_ = "String used for Matrix construction is invalid";
 };
 
 template <class Numeric> class Matrix {
@@ -196,7 +202,13 @@ std::ostream &operator<<(std::ostream &out, const Matrix<Numeric> &matrix) {
     }
   }
   for (size_t row = 0; row < matrix.Rows(); ++row) {
-    out << "| ";
+    if (row == 0) {
+      out << "/ ";
+    } else if (row + 1 == matrix.Rows()) {
+      out << "\\ ";
+    } else {
+      out << "| ";
+    }
     for (size_t col = 0; col < matrix.Cols(); ++col) {
       out << matrix(row, col)
           << std::string(
@@ -205,7 +217,92 @@ std::ostream &operator<<(std::ostream &out, const Matrix<Numeric> &matrix) {
                      1,
                  ' ');
     }
-    out << "|\n";
+    if (row + 1 == matrix.Rows()) {
+      out << "/\n";
+    } else if (row == 0) {
+      out << "\\\n";
+    } else {
+      out << "|\n";
+    }
   }
   return out;
+}
+
+template <class Numeric>
+std::istream &operator>>(std::istream &in, Matrix<Numeric> &matrix) {
+  std::vector<std::vector<Numeric>> contents;
+  std::string input;
+  Numeric value;
+  size_t cols = 0;
+  size_t rows = 0;
+  while (in >> input) {
+    contents.emplace_back();
+    if (rows == 0) {
+      if (input != "/") {
+        throw InvalidMatrixString();
+      }
+      in >> input;
+      while (input != "/" && input != "\\") {
+        try {
+          std::istringstream(input) >> value;
+        } catch (...) {
+          throw InvalidMatrixString();
+        }
+        contents[0].push_back(value);
+        cols++;
+        in >> input;
+      }
+      if (input == "/") {
+        matrix = Matrix<Numeric>(std::move(contents));
+        return in;
+      }
+      if (input != "\\") {
+        throw InvalidMatrixString();
+      }
+      rows++;
+      continue;
+    }
+    contents.back().resize(cols);
+    if (input == "\\") {
+      for (size_t i = 0; i < cols; i++) {
+        in >> input;
+        try {
+          std::istringstream(input) >> value;
+        } catch (...) {
+          throw InvalidMatrixString();
+        }
+        contents.back()[i] = value;
+      }
+      in >> input;
+      if (input == "/") {
+        matrix = Matrix<Numeric>(std::move(contents));
+        return in;
+      } else {
+        throw InvalidMatrixString();
+      }
+    }
+    if (input == "|") {
+      for (size_t i = 0; i < cols; i++) {
+        in >> input;
+        try {
+          std::istringstream(input) >> value;
+        } catch (...) {
+          throw InvalidMatrixString();
+        }
+        contents.back()[i] = value;
+      }
+      in >> input;
+      if (input != "|") {
+        throw InvalidMatrixString();
+      }
+      continue;
+    }
+    throw InvalidMatrixString();
+  }
+  if (rows == 0) {
+    matrix = Matrix<Numeric>();
+  } else {
+    throw InvalidMatrixString();
+  }
+  return in;
 }

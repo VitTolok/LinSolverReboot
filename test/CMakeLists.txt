@@ -15,3 +15,11 @@ target_link_libraries(GTest_core INTERFACE
   GTest::gtest_main
   pthread
 )
+
+add_executable(handtest ${CMAKE_SOURCE_DIR}/test/handtest.cpp)
+target_include_directories(handtest PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+  ${CMAKE_SOURCE_DIR}/include/numeric
+  ${CMAKE_SOURCE_DIR}/include/solvercore
+)
+target_link_libraries(handtest PRIVATE rational)
