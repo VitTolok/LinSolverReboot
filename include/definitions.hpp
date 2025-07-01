@@ -1,3 +1,4 @@
+#pragma once
 #include <stdexcept>
 
 class MachineError : public std::exception {

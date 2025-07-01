@@ -42,7 +42,7 @@ Rational operator-(const Rational &first, const Rational &second) {
   Rational clone = first;
   return clone -= second;
 }
-Rational operator-(const Rational &first, int) {
+Rational operator-(const Rational &first) {
   Rational clone = first;
   clone.num_ *= -1;
   return clone;
