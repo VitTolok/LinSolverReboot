@@ -25,7 +25,7 @@ public:
 
   friend Rational operator+(const Rational &, const Rational &);
   friend Rational operator-(const Rational &, const Rational &);
-  friend Rational operator-(const Rational &, int);
+  friend Rational operator-(const Rational &);
   friend Rational operator*(const Rational &, const Rational &);
   friend Rational operator/(const Rational &, const Rational &);
 
