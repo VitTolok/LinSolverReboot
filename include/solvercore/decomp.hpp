@@ -8,6 +8,8 @@ template <class Numeric> struct Decompose {
   std::optional<Matrix<Numeric>> upper;
   std::optional<Matrix<Numeric>> lower;
 
+  Decompose() : simple(), det(), upper(), lower() {}
+
   explicit Decompose(const Matrix<Numeric> &matrix) : simple(matrix) {
     if (simple.Rows() == simple.Cols()) {
       det = Numeric(1);
