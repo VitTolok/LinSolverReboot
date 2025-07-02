@@ -1,0 +1,74 @@
+#pragma once
+#include "definitions.hpp"
+#include <deque>
+#include <iostream>
+
+class UBigIntOverflow : public MachineError {
+private:
+  std::string message_ = "The unsigned big integer cannot go negative";
+};
+
+class UBigIntDivisionByZero : public MachineError {
+private:
+  std::string message_ = "Can't divide by 0";
+};
+
+class UBigInt {
+public:
+  UBigInt();
+  explicit UBigInt(u_int64_t);
+  UBigInt(const UBigInt &) = default;
+  UBigInt(UBigInt &&) = default;
+
+  UBigInt &operator=(const UBigInt &) = default;
+  UBigInt &operator=(UBigInt &&) = default;
+  UBigInt &operator=(u_int64_t);
+
+  friend UBigInt &operator+=(UBigInt &, const UBigInt &);
+  friend UBigInt &operator-=(UBigInt &, const UBigInt &);
+  friend UBigInt &operator*=(UBigInt &, const UBigInt &);
+  friend UBigInt &operator/=(UBigInt &, const UBigInt &);
+  friend UBigInt &operator+=(UBigInt &, u_int64_t);
+  friend UBigInt &operator-=(UBigInt &, u_int64_t);
+  friend UBigInt &operator*=(UBigInt &, u_int64_t);
+  friend UBigInt &operator/=(UBigInt &, u_int64_t);
+
+  friend UBigInt operator+(const UBigInt &, const UBigInt &);
+  friend UBigInt operator-(const UBigInt &, const UBigInt &);
+  friend UBigInt operator*(const UBigInt &, const UBigInt &);
+  friend UBigInt operator/(const UBigInt &, const UBigInt &);
+  friend UBigInt operator+(const UBigInt &, u_int64_t);
+  friend UBigInt operator-(const UBigInt &, u_int64_t);
+  friend UBigInt operator*(const UBigInt &, u_int64_t);
+  friend UBigInt operator/(const UBigInt &, u_int64_t);
+
+  friend bool operator<(const UBigInt &, const UBigInt &);
+  friend bool operator>(const UBigInt &, const UBigInt &);
+  friend bool operator<=(const UBigInt &, const UBigInt &);
+  friend bool operator>=(const UBigInt &, const UBigInt &);
+  friend bool operator==(const UBigInt &, const UBigInt &);
+  friend bool operator!=(const UBigInt &, const UBigInt &);
+
+  friend bool operator<(const UBigInt &, u_int64_t);
+  friend bool operator>(const UBigInt &, u_int64_t);
+  friend bool operator<=(const UBigInt &, u_int64_t);
+  friend bool operator>=(const UBigInt &, u_int64_t);
+  friend bool operator==(const UBigInt &, u_int64_t);
+  friend bool operator!=(const UBigInt &, u_int64_t);
+
+  friend bool operator<(u_int64_t, const UBigInt &);
+  friend bool operator>(u_int64_t, const UBigInt &);
+  friend bool operator<=(u_int64_t, const UBigInt &);
+  friend bool operator>=(u_int64_t, const UBigInt &);
+  friend bool operator==(u_int64_t, const UBigInt &);
+  friend bool operator!=(u_int64_t, const UBigInt &);
+
+  explicit operator u_int64_t() const;
+  explicit operator u_int32_t() const;
+
+  ~UBigInt() = default;
+
+private:
+  std::deque<u_int32_t> storage_;
+  void Shrink();
+};
