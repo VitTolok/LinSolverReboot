@@ -13,6 +13,7 @@ UBigInt &UBigInt::operator=(u_int64_t number) {
   storage_[0] = static_cast<u_int32_t>(number % (1ull << 32));
   storage_[1] = static_cast<u_int32_t>(number >> 32);
   Shrink();
+  return *this;
 }
 
 UBigInt &operator+=(UBigInt &first, const UBigInt &second) {
