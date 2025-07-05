@@ -28,19 +28,23 @@ public:
   friend UBigInt &operator-=(UBigInt &, const UBigInt &);
   friend UBigInt &operator*=(UBigInt &, const UBigInt &);
   friend UBigInt &operator/=(UBigInt &, const UBigInt &);
+  friend UBigInt &operator%=(UBigInt &, const UBigInt &);
   friend UBigInt &operator+=(UBigInt &, u_int64_t);
   friend UBigInt &operator-=(UBigInt &, u_int64_t);
   friend UBigInt &operator*=(UBigInt &, u_int64_t);
   friend UBigInt &operator/=(UBigInt &, u_int64_t);
+  friend UBigInt &operator%=(UBigInt &, u_int64_t);
 
   friend UBigInt operator+(const UBigInt &, const UBigInt &);
   friend UBigInt operator-(const UBigInt &, const UBigInt &);
   friend UBigInt operator*(const UBigInt &, const UBigInt &);
   friend UBigInt operator/(const UBigInt &, const UBigInt &);
+  friend UBigInt operator%(const UBigInt &, const UBigInt &);
   friend UBigInt operator+(const UBigInt &, u_int64_t);
   friend UBigInt operator-(const UBigInt &, u_int64_t);
   friend UBigInt operator*(const UBigInt &, u_int64_t);
   friend UBigInt operator/(const UBigInt &, u_int64_t);
+  friend UBigInt operator%(const UBigInt &, u_int64_t);
 
   friend bool operator<(const UBigInt &, const UBigInt &);
   friend bool operator>(const UBigInt &, const UBigInt &);
@@ -62,6 +66,11 @@ public:
   friend bool operator>=(u_int64_t, const UBigInt &);
   friend bool operator==(u_int64_t, const UBigInt &);
   friend bool operator!=(u_int64_t, const UBigInt &);
+
+  friend UBigInt &operator<<=(UBigInt &, size_t);
+  friend UBigInt &operator>>=(UBigInt &, size_t);
+  friend UBigInt operator<<(const UBigInt &, size_t);
+  friend UBigInt operator>>(const UBigInt &, size_t);
 
   explicit operator u_int64_t() const;
   explicit operator u_int32_t() const;
