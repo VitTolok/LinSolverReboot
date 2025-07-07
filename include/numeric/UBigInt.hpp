@@ -75,6 +75,9 @@ public:
   explicit operator u_int64_t() const;
   explicit operator u_int32_t() const;
 
+  friend std::ostream &operator<<(std::ostream &, const UBigInt &);
+  friend std::istream &operator>>(std::istream &, UBigInt &);
+
   ~UBigInt() = default;
 
 private:

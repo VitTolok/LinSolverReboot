@@ -466,11 +466,48 @@ UBigInt::operator u_int32_t() const {
   return storage_[0];
 }
 
+std::ostream &operator<<(std::ostream &out, const UBigInt &bigint) {
+  if (bigint <= 1'000'000) {
+    return out << static_cast<u_int32_t>(bigint);
+  }
+  size_t power_count = 32 * (bigint.storage_.size());
+  u_int32_t greatest = bigint.storage_.back();
+  while (greatest < (1u << 31)) {
+    greatest <<= 1;
+    --power_count;
+  }
+  power_count = static_cast<double>(power_count) / 3.321928094887362 + 1;
+  size_t count = 0;
+  UBigInt div(1);
+  while (power_count - count >= 9) {
+    div *= 1'000'000'000u;
+    count += 9;
+  }
+  while (power_count > count) {
+    div *= 10;
+    ++count;
+  }
+  while (bigint < div) {
+    div /= 10;
+    --count;
+  }
+  div /= 1'000'000;
+  u_int32_t simplified = static_cast<u_int32_t>(bigint / div);
+  div = 0;
+  div.Shrink();
+  if (simplified % 10 >= 5) {
+    simplified += 5;
+  }
+  simplified /= 10;
+  return out << simplified / 100'000 << '.' << simplified % 100'000 << 'e'
+             << count;
+}
+
 void UBigInt::Shrink() {
   while (!storage_.empty() && storage_.back() == 0u) {
     storage_.pop_back();
   }
-  if (storage_.max_size() > ((storage_.size() + 1) * 16)) {
+  if (storage_.max_size() > (storage_.size() * 8)) {
     storage_.shrink_to_fit();
   }
 }
