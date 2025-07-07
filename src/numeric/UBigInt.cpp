@@ -1,5 +1,6 @@
 #include "UBigInt.hpp"
 #include <limits>
+#include <sstream>
 
 UBigInt::UBigInt() : storage_() { Shrink(); }
 UBigInt::UBigInt(u_int64_t number) : storage_(2, 0u) {
@@ -17,6 +18,9 @@ UBigInt &UBigInt::operator=(u_int64_t number) {
 }
 
 UBigInt &operator+=(UBigInt &first, const UBigInt &second) {
+  if (first == 0) {
+    return first = second;
+  }
   first.storage_.resize(std::max(first.storage_.size(), second.storage_.size()),
                         0u);
   u_int32_t carryover = 0u;
@@ -79,7 +83,9 @@ UBigInt &operator*=(UBigInt &first, const UBigInt &second) {
   for (size_t i = 0; i < first.storage_.size(); ++i) {
     buffer += second * first.storage_[i];
     first.storage_[i] = buffer.storage_[0];
-    buffer.storage_.pop_front();
+    if (!buffer.storage_.empty()) {
+      buffer.storage_.pop_front();
+    }
   }
   for (size_t i = 0; i < buffer.storage_.size(); ++i) {
     first.storage_.push_back(buffer.storage_[i]);
@@ -159,7 +165,7 @@ UBigInt operator-(const UBigInt &first, const UBigInt &second) {
     return UBigInt(0);
   }
   UBigInt copy = first;
-  return copy += second;
+  return copy -= second;
 }
 UBigInt operator*(const UBigInt &first, const UBigInt &second) {
   UBigInt copy = first;
@@ -308,15 +314,15 @@ UBigInt operator+(const UBigInt &bigint, u_int64_t number) {
 }
 UBigInt operator-(const UBigInt &bigint, u_int64_t number) {
   UBigInt copy = bigint;
-  return copy += number;
+  return copy -= number;
 }
 UBigInt operator*(const UBigInt &bigint, u_int64_t number) {
   UBigInt copy = bigint;
-  return copy += number;
+  return copy *= number;
 }
 UBigInt operator/(const UBigInt &bigint, u_int64_t number) {
   UBigInt copy = bigint;
-  return copy += number;
+  return copy /= number;
 }
 UBigInt operator%(const UBigInt &bigint, u_int64_t div) {
   UBigInt copy = bigint;
@@ -393,7 +399,7 @@ bool operator!=(const UBigInt &bigint, u_int64_t number) {
 
 bool operator<(u_int64_t number, const UBigInt &bigint) {
   if (bigint.storage_.size() > 2) {
-    return false;
+    return true;
   }
   return number < static_cast<u_int64_t>(bigint);
 }
@@ -495,12 +501,65 @@ std::ostream &operator<<(std::ostream &out, const UBigInt &bigint) {
   u_int32_t simplified = static_cast<u_int32_t>(bigint / div);
   div = 0;
   div.Shrink();
-  if (simplified % 10 >= 5) {
-    simplified += 5;
-  }
+  simplified += 5;
   simplified /= 10;
-  return out << simplified / 100'000 << '.' << simplified % 100'000 << 'e'
-             << count;
+  out << simplified / 100'000 << '.';
+  simplified %= 100'000;
+  if (simplified == 0) {
+    out << '0';
+  } else {
+    greatest = 10'000;
+    while (simplified < greatest) {
+      out << '0';
+      greatest /= 10;
+    }
+    out << simplified;
+  }
+  return out << 'e' << count;
+}
+
+std::istream &operator>>(std::istream &in, UBigInt &bigint) {
+  std::string input;
+  in >> input;
+  size_t power = 0;
+  if (input.find('e') != std::string::npos) {
+    size_t sep = input.find('e');
+    try {
+      std::istringstream(input.c_str() + sep + 1) >> power;
+    } catch (...) {
+      throw UBigIntInvalidString();
+    }
+    input.resize(sep);
+    size_t dot = input.find('.');
+    if (dot != std::string::npos) {
+      input.erase(dot);
+      if (sep - dot > power) {
+        input.resize(dot + power);
+        power = 0;
+      } else {
+        power -= (sep - dot);
+      }
+    }
+  }
+  bigint = 0;
+  size_t pos = 0;
+  while (input.size() > pos + 9) {
+    u_int32_t buffer = 0;
+    std::istringstream(input.substr(0, 9)) >> buffer;
+    bigint *= 1'000'000'000;
+    bigint += buffer;
+    pos += 9;
+  }
+  if (input.size() > pos) {
+    u_int32_t buffer = 0;
+    std::istringstream(input.substr(pos)) >> buffer;
+    while (input.size() > pos) {
+      bigint *= 10;
+      pos++;
+    }
+    bigint += buffer;
+  }
+  return in;
 }
 
 void UBigInt::Shrink() {

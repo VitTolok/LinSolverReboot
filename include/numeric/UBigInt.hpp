@@ -4,11 +4,31 @@
 #include <iostream>
 
 class UBigIntOverflow : public MachineError {
+public:
+  [[nodiscard]] const char *what() const noexcept override {
+    return message_.c_str();
+  }
+
 private:
   std::string message_ = "The unsigned big integer cannot go negative";
 };
 
+class UBigIntInvalidString : public MachineError {
+public:
+  [[nodiscard]] const char *what() const noexcept override {
+    return message_.c_str();
+  }
+
+private:
+  std::string message_ = "Use either full integers or '1.01612e288' form";
+};
+
 class UBigIntDivisionByZero : public MachineError {
+public:
+  [[nodiscard]] const char *what() const noexcept override {
+    return message_.c_str();
+  }
+
 private:
   std::string message_ = "Can't divide by 0";
 };
