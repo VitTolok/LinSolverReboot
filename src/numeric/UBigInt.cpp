@@ -1,6 +1,11 @@
 #include "UBigInt.hpp"
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
 #include <limits>
+#include <map>
 #include <sstream>
+#include <vector>
 
 UBigInt::UBigInt() : storage_() { Shrink(); }
 UBigInt::UBigInt(u_int64_t number) : storage_(2, 0u) {
@@ -472,50 +477,61 @@ UBigInt::operator u_int32_t() const {
   return storage_[0];
 }
 
+UBigInt Power(const UBigInt &base, size_t power) {
+  switch (power) {
+  case 0:
+    return UBigInt(1);
+  case 1:
+    return base;
+  case 2:
+    return base * base;
+  }
+  static std::map<UBigInt, std::vector<UBigInt>> powers;
+  auto location = powers.emplace(base, std::vector<UBigInt>(1, base)).first;
+  while ((1ull << location->second.size()) <= power) {
+    location->second.push_back(location->second.back() *
+                               location->second.back());
+  }
+  UBigInt result(1);
+  for (size_t i = 0; i < location->second.size(); ++i) {
+    if (power >= (1ull << (location->second.size() - i - 1))) {
+      result *= location->second[location->second.size() - i - 1];
+      power -= (1ull << (location->second.size() - i - 1));
+    }
+  }
+  return result;
+}
+
 std::ostream &operator<<(std::ostream &out, const UBigInt &bigint) {
   if (bigint <= 1'000'000) {
     return out << static_cast<u_int32_t>(bigint);
   }
-  size_t power_count = 32 * (bigint.storage_.size());
+  size_t power_of_2 = 32 * (bigint.storage_.size());
   u_int32_t greatest = bigint.storage_.back();
   while (greatest < (1u << 31)) {
     greatest <<= 1;
-    --power_count;
+    --power_of_2;
   }
-  power_count = static_cast<double>(power_count) / 3.321928094887362 + 1;
-  size_t count = 0;
-  UBigInt div(1);
-  while (power_count - count >= 9) {
-    div *= 1'000'000'000u;
-    count += 9;
-  }
-  while (power_count > count) {
-    div *= 10;
-    ++count;
-  }
-  while (bigint < div) {
-    div /= 10;
-    --count;
-  }
-  div /= 1'000'000;
-  u_int32_t simplified = static_cast<u_int32_t>(bigint / div);
-  div = 0;
-  div.Shrink();
-  simplified += 5;
-  simplified /= 10;
-  out << simplified / 100'000 << '.';
-  simplified %= 100'000;
-  if (simplified == 0) {
-    out << '0';
+  --power_of_2;
+  const long double raw =
+      static_cast<long double>(power_of_2) / 3.321928094887362;
+  size_t power_of_10 = static_cast<size_t>(raw);
+  long double mult = powl(10, raw - static_cast<long double>(power_of_10));
+  if (bigint.storage_.size() == 1) {
+    mult *= static_cast<long double>(bigint.storage_[0]) /
+            static_cast<long double>(1ull << power_of_2);
   } else {
-    greatest = 10'000;
-    while (simplified < greatest) {
-      out << '0';
-      greatest /= 10;
-    }
-    out << simplified;
+    mult *= static_cast<long double>(
+                (static_cast<u_int64_t>(bigint.storage_.back()) << 32) +
+                bigint.storage_[bigint.storage_.size() - 2]) /
+            static_cast<long double>(
+                1ull << (power_of_2 - 32 * (bigint.storage_.size() - 2)));
   }
-  return out << 'e' << count;
+  if (mult >= 10 - 0.000001) {
+    ++power_of_10;
+    mult /= 10;
+  }
+  return out << mult << 'e' << power_of_10;
 }
 
 std::istream &operator>>(std::istream &in, UBigInt &bigint) {
@@ -532,12 +548,12 @@ std::istream &operator>>(std::istream &in, UBigInt &bigint) {
     input.resize(sep);
     size_t dot = input.find('.');
     if (dot != std::string::npos) {
-      input.erase(dot);
-      if (sep - dot > power) {
+      input.erase(dot, 1);
+      if (sep - dot - 1 > power) {
         input.resize(dot + power);
         power = 0;
       } else {
-        power -= (sep - dot);
+        power -= (sep - dot - 1);
       }
     }
   }
@@ -545,7 +561,7 @@ std::istream &operator>>(std::istream &in, UBigInt &bigint) {
   size_t pos = 0;
   while (input.size() > pos + 9) {
     u_int32_t buffer = 0;
-    std::istringstream(input.substr(0, 9)) >> buffer;
+    std::istringstream(input.substr(pos, 9)) >> buffer;
     bigint *= 1'000'000'000;
     bigint += buffer;
     pos += 9;
@@ -559,10 +575,22 @@ std::istream &operator>>(std::istream &in, UBigInt &bigint) {
     }
     bigint += buffer;
   }
+  bigint *= Power(UBigInt(10), power);
   return in;
 }
 
-void UBigInt::Shrink() {
+std::string UBigInt::Exact() const {
+  std::string buffer;
+  UBigInt copy = *this;
+  while (copy > 0) {
+    buffer.push_back('0' + static_cast<u_int32_t>(copy % 10));
+    copy /= 10;
+  }
+  std::reverse(buffer.begin(), buffer.end());
+  return buffer;
+}
+
+void UBigInt::Shrink() noexcept {
   while (!storage_.empty() && storage_.back() == 0u) {
     storage_.pop_back();
   }

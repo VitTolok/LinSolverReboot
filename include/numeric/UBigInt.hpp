@@ -95,12 +95,15 @@ public:
   explicit operator u_int64_t() const;
   explicit operator u_int32_t() const;
 
+  friend UBigInt Power(const UBigInt &, size_t);
+
   friend std::ostream &operator<<(std::ostream &, const UBigInt &);
   friend std::istream &operator>>(std::istream &, UBigInt &);
+  std::string Exact() const;
 
   ~UBigInt() = default;
 
 private:
   std::deque<u_int32_t> storage_;
-  void Shrink();
+  void Shrink() noexcept;
 };
