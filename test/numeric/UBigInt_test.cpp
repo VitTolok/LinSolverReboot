@@ -170,12 +170,13 @@ TEST_F(Sub64OperatorTests, DivTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
     auto second = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
+    UBigInt number(first);
     ASSERT_THROW(UBigInt(first) / 0, UBigIntDivisionByZero);
+    ASSERT_THROW(number /= 0, UBigIntDivisionByZero);
     ASSERT_EQ(UBigInt(first) / 1, first);
     ASSERT_EQ(UBigInt(first) / UBigInt(second), first / second);
     ASSERT_EQ(UBigInt(first) / second, first / second);
-    UBigInt number(first);
-    ASSERT_EQ(number /= second, first / second);
+    ASSERT_EQ((number = first) /= second, first / second);
     ASSERT_EQ((number = first) /= UBigInt(second), first / second);
     ASSERT_EQ((number = first) /= number, 1);
   }
@@ -185,12 +186,13 @@ TEST_F(Sub64OperatorTests, ModTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
     auto second = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
+    UBigInt number(first);
     ASSERT_THROW(UBigInt(first) % 0, UBigIntDivisionByZero);
+    ASSERT_THROW(number %= 0, UBigIntDivisionByZero);
     ASSERT_EQ(UBigInt(first) % 1, 0);
     ASSERT_EQ(UBigInt(first) % UBigInt(second), first % second);
     ASSERT_EQ(UBigInt(first) % second, first % second);
-    UBigInt number(first);
-    ASSERT_EQ(number %= second, first % second);
+    ASSERT_EQ((number = first) %= second, first % second);
     ASSERT_EQ((number = first) %= UBigInt(second), first % second);
     ASSERT_EQ((number = first) %= number, 0);
   }
@@ -295,3 +297,151 @@ TEST_F(Sub64OperatorTests, RightShiftTest) {
     ASSERT_EQ((number = first) >>= second, first >> second);
   }
 }
+
+class StringAddOperatorTests
+    : public ::testing::TestWithParam<
+          std::tuple<std::string, std::string, std::string>> {};
+
+TEST_P(StringAddOperatorTests, AddTest) {
+  auto [first, second, result] = GetParam();
+  UBigInt first_;
+  UBigInt second_;
+  UBigInt result_;
+  std::istringstream(first) >> first_;
+  std::istringstream(second) >> second_;
+  std::istringstream(result) >> result_;
+  ASSERT_EQ(first_ + second_, result_);
+  ASSERT_EQ(first_ += second_, result_);
+  std::istringstream(first) >> first_;
+  ASSERT_NE(first_ + second_, result_ + 1);
+  ASSERT_NE(first_ += second_, result_ + 1);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AddTest, StringAddOperatorTests,
+    ::testing::Values(
+        std::make_tuple("123", "123000", "123123"),
+        std::make_tuple("1234567890987654321234567890",
+                        "102030405060708090807060504030201",
+                        "102031639628599078461381738598091"),
+        std::make_tuple("4e500", "5e495", "4.00005e500"),
+        std::make_tuple("2.6e600", "7e560",
+                        "2.6000000000000000000000000000000000000007e600")));
+
+class StringSubOperatorTests
+    : public ::testing::TestWithParam<
+          std::tuple<std::string, std::string, std::string>> {};
+
+TEST_P(StringSubOperatorTests, SubTest) {
+  auto [first, second, result] = GetParam();
+  UBigInt first_;
+  UBigInt second_;
+  UBigInt result_;
+  std::istringstream(first) >> first_;
+  std::istringstream(second) >> second_;
+  std::istringstream(result) >> result_;
+  ASSERT_EQ(first_ - second_, result_);
+  ASSERT_EQ(first_ -= second_, result_);
+  std::istringstream(first) >> first_;
+  ASSERT_THROW(second_ - first_, UBigIntUnderflow);
+  ASSERT_THROW(second_ -= first_, UBigIntUnderflow);
+  std::istringstream(first) >> first_;
+  ASSERT_NE(first_ - second_, result_ + 1);
+  ASSERT_NE(first_ -= second_, result_ + 1);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    SubTest, StringSubOperatorTests,
+    ::testing::Values(
+        std::make_tuple("123000", "123", "122877"),
+        std::make_tuple("102030405060708090807060504030201",
+                        "1234567890987654321234567890",
+                        "102029170492817103152739269462311"),
+        std::make_tuple("4e500", "5e495", "3.99995e500"),
+        std::make_tuple("2.6e600", "7e560",
+                        "2.5999999999999999999999999999999999999993e600")));
+
+class StringMulOperatorTests
+    : public ::testing::TestWithParam<
+          std::tuple<std::string, std::string, std::string>> {};
+
+TEST_P(StringMulOperatorTests, MulTest) {
+  auto [first, second, result] = GetParam();
+  UBigInt first_;
+  UBigInt second_;
+  UBigInt result_;
+  std::istringstream(first) >> first_;
+  std::istringstream(second) >> second_;
+  std::istringstream(result) >> result_;
+  ASSERT_EQ(first_ * second_, result_);
+  ASSERT_EQ(first_ *= second_, result_);
+  std::istringstream(first) >> first_;
+  ASSERT_NE(first_ * second_, result_ + 1);
+  ASSERT_NE(first_ *= second_, result_ + 1);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    MulTest, StringMulOperatorTests,
+    ::testing::Values(
+        std::make_tuple("123000", "123", "15129000"),
+        std::make_tuple(
+            "102030405060708090807060504030201", "1234567890987654321234567890",
+            "125963461992414480029122753599091047726296511681221744845890"),
+        std::make_tuple("4e500", "5e495", "2e996"),
+        std::make_tuple("2.6e600", "7e560", "1.82e1161")));
+
+class StringDivOperatorTests
+    : public ::testing::TestWithParam<
+          std::tuple<std::string, std::string, std::string>> {};
+
+TEST_P(StringDivOperatorTests, DivTest) {
+  auto [first, second, result] = GetParam();
+  UBigInt first_;
+  UBigInt second_;
+  UBigInt result_;
+  std::istringstream(first) >> first_;
+  std::istringstream(second) >> second_;
+  std::istringstream(result) >> result_;
+  ASSERT_EQ(first_ / second_, result_);
+  ASSERT_EQ(first_ /= second_, result_);
+  std::istringstream(first) >> first_;
+  ASSERT_NE(first_ / second_, result_ + 1);
+  ASSERT_NE(first_ /= second_, result_ + 1);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DivTest, StringDivOperatorTests,
+    ::testing::Values(
+        std::make_tuple("123000", "123", "1000"),
+        std::make_tuple("102030405060708090807060504030201",
+                        "1234567890987654321234567890", "82644"),
+        std::make_tuple("4e500", "5e495", "8e4"),
+        std::make_tuple("2.6e600", "7e560",
+                        "3714285714285714285714285714285714285714")));
+
+class StringModOperatorTests
+    : public ::testing::TestWithParam<
+          std::tuple<std::string, std::string, std::string>> {};
+
+TEST_P(StringModOperatorTests, DivTest) {
+  auto [first, second, result] = GetParam();
+  UBigInt first_;
+  UBigInt second_;
+  UBigInt result_;
+  std::istringstream(first) >> first_;
+  std::istringstream(second) >> second_;
+  std::istringstream(result) >> result_;
+  ASSERT_EQ(first_ % second_, result_);
+  ASSERT_EQ(first_ %= second_, result_);
+  std::istringstream(first) >> first_;
+  ASSERT_NE(first_ % second_, result_ + 1);
+  ASSERT_NE(first_ %= second_, result_ + 1);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ModTest, StringModOperatorTests,
+    ::testing::Values(std::make_tuple("123000", "123", "0"),
+                      std::make_tuple("102030405060708090807060504030201",
+                                      "1234567890987654321234567890",
+                                      "776277924387082950875329041"),
+                      std::make_tuple("4e500", "5e495", "0")));
