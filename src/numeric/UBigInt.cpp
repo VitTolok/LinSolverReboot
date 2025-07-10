@@ -503,7 +503,7 @@ UBigInt Power(const UBigInt &base, size_t power) {
 }
 
 std::ostream &operator<<(std::ostream &out, const UBigInt &bigint) {
-  if (bigint <= 1'000'000) {
+  if (bigint < 1'000'000) {
     return out << static_cast<u_int32_t>(bigint);
   }
   size_t power_of_2 = 32 * (bigint.storage_.size());
@@ -550,6 +550,20 @@ std::istream &operator>>(std::istream &in, UBigInt &bigint) {
     if (dot != std::string::npos) {
       input.erase(dot, 1);
       if (sep - dot - 1 > power) {
+        if (input.size() > dot + power) {
+          if (input[dot + power] - '0' >= 5) {
+            int64_t pos = dot + power - 1;
+            while (pos >= 0 && input[pos] == '9') {
+              input[pos] = 0;
+              --pos;
+            }
+            if (pos == -1) {
+              input.insert(0, 1, '1');
+            } else {
+              input[pos]++;
+            }
+          }
+        }
         input.resize(dot + power);
         power = 0;
       } else {
