@@ -56,7 +56,7 @@ UBigInt &operator-=(UBigInt &first, const UBigInt &second) {
     return first = 0;
   }
   if (first < second) {
-    throw UBigIntOverflow();
+    throw UBigIntUnderflow();
   }
   u_int32_t debt = 0u;
   for (size_t i = 0; i < second.storage_.size(); ++i) {
@@ -220,7 +220,7 @@ UBigInt &operator-=(UBigInt &bigint, u_int64_t number) {
     return bigint;
   }
   if (bigint < number) {
-    throw UBigIntOverflow();
+    throw UBigIntUnderflow();
   }
   if (number < (1ull << 32)) {
     u_int32_t debt = static_cast<u_int32_t>(number);
@@ -310,7 +310,7 @@ UBigInt &operator%=(UBigInt &bigint, u_int64_t div) {
     }
     return bigint = remainder;
   }
-  return bigint /= UBigInt(div);
+  return bigint %= UBigInt(div);
 }
 
 UBigInt operator+(const UBigInt &bigint, u_int64_t number) {

@@ -115,3 +115,183 @@ INSTANTIATE_TEST_SUITE_P(
                       std::make_pair("1029384756.6574839201e73", "1.02938e82"),
                       std::make_pair("1.234567e3", "1235"),
                       std::make_pair("9.999999e304", "1e305")));
+
+class Sub64OperatorTests : public RandomIntTests {};
+
+TEST_F(Sub64OperatorTests, AddTest) {
+  for (size_t i = 0; i < 1000; i++) {
+    auto first = dist(rng);
+    auto second = dist(rng) % (std::numeric_limits<u_int64_t>::max() - first);
+    UBigInt number(first);
+    ASSERT_EQ(UBigInt(first) + UBigInt(second), first + second);
+    ASSERT_EQ(UBigInt(first) + second, first + second);
+    ASSERT_EQ(number += second, first + second);
+    number = first;
+    ASSERT_EQ(number += UBigInt(second), first + second);
+    ASSERT_EQ((number = std::min(first, second)) += number,
+              std::min(first, second) * 2);
+  }
+}
+
+TEST_F(Sub64OperatorTests, SubTest) {
+  for (size_t i = 0; i < 1000; i++) {
+    auto first = dist(rng);
+    auto second = dist(rng) % first;
+    ASSERT_EQ(UBigInt(first) - UBigInt(second), first - second);
+    ASSERT_THROW(UBigInt(second) - UBigInt(first), UBigIntUnderflow);
+    ASSERT_EQ(UBigInt(first) - second, first - second);
+    ASSERT_THROW(UBigInt(second) - first, UBigIntUnderflow);
+    UBigInt number(first);
+    ASSERT_EQ(number -= second, first - second);
+    ASSERT_THROW((number = second) -= first, UBigIntUnderflow);
+    ASSERT_EQ((number = first) -= UBigInt(second), first - second);
+    ASSERT_THROW((number = second) -= UBigInt(first), UBigIntUnderflow);
+    ASSERT_EQ((number = first) -= number, 0);
+  }
+}
+
+TEST_F(Sub64OperatorTests, MulTest) {
+  for (size_t i = 0; i < 1000; i++) {
+    auto first = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
+    auto second = dist(rng) % (std::numeric_limits<u_int64_t>::max() / first);
+    ASSERT_EQ(UBigInt(first) * 0, 0);
+    ASSERT_EQ(UBigInt(first) * 1, first);
+    ASSERT_EQ(UBigInt(first) * UBigInt(second), first * second);
+    ASSERT_EQ(UBigInt(first) * second, first * second);
+    UBigInt number(first);
+    ASSERT_EQ(number *= second, first * second);
+    ASSERT_EQ((number = first) *= UBigInt(second), first * second);
+    ASSERT_EQ((number = std::min(first, second)) *= number,
+              std::min(first, second) * std::min(first, second));
+  }
+}
+
+TEST_F(Sub64OperatorTests, DivTest) {
+  for (size_t i = 0; i < 1000; i++) {
+    auto first = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
+    auto second = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
+    ASSERT_THROW(UBigInt(first) / 0, UBigIntDivisionByZero);
+    ASSERT_EQ(UBigInt(first) / 1, first);
+    ASSERT_EQ(UBigInt(first) / UBigInt(second), first / second);
+    ASSERT_EQ(UBigInt(first) / second, first / second);
+    UBigInt number(first);
+    ASSERT_EQ(number /= second, first / second);
+    ASSERT_EQ((number = first) /= UBigInt(second), first / second);
+    ASSERT_EQ((number = first) /= number, 1);
+  }
+}
+
+TEST_F(Sub64OperatorTests, ModTest) {
+  for (size_t i = 0; i < 1000; i++) {
+    auto first = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
+    auto second = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
+    ASSERT_THROW(UBigInt(first) % 0, UBigIntDivisionByZero);
+    ASSERT_EQ(UBigInt(first) % 1, 0);
+    ASSERT_EQ(UBigInt(first) % UBigInt(second), first % second);
+    ASSERT_EQ(UBigInt(first) % second, first % second);
+    UBigInt number(first);
+    ASSERT_EQ(number %= second, first % second);
+    ASSERT_EQ((number = first) %= UBigInt(second), first % second);
+    ASSERT_EQ((number = first) %= number, 0);
+  }
+}
+
+TEST_F(Sub64OperatorTests, LTTest) {
+  for (size_t i = 0; i < 1000; i++) {
+    auto first = dist(rng);
+    auto second = dist(rng);
+    ASSERT_FALSE(UBigInt(first) < UBigInt(first));
+    ASSERT_FALSE(UBigInt(first) < first);
+    ASSERT_FALSE(first < UBigInt(first));
+    ASSERT_EQ(UBigInt(first) < UBigInt(second), first < second);
+    ASSERT_EQ(UBigInt(first) < second, first < second);
+    ASSERT_EQ(first < UBigInt(second), first < second);
+  }
+}
+TEST_F(Sub64OperatorTests, GTTest) {
+  for (size_t i = 0; i < 1000; i++) {
+    auto first = dist(rng);
+    auto second = dist(rng);
+    ASSERT_FALSE(UBigInt(first) > UBigInt(first));
+    ASSERT_FALSE(UBigInt(first) > first);
+    ASSERT_FALSE(first > UBigInt(first));
+    ASSERT_EQ(UBigInt(first) > UBigInt(second), first > second);
+    ASSERT_EQ(UBigInt(first) > second, first > second);
+    ASSERT_EQ(first > UBigInt(second), first > second);
+  }
+}
+TEST_F(Sub64OperatorTests, LETest) {
+  for (size_t i = 0; i < 1000; i++) {
+    auto first = dist(rng);
+    auto second = dist(rng);
+    ASSERT_TRUE(UBigInt(first) <= UBigInt(first));
+    ASSERT_TRUE(UBigInt(first) <= first);
+    ASSERT_TRUE(first <= UBigInt(first));
+    ASSERT_EQ(UBigInt(first) <= UBigInt(second), first <= second);
+    ASSERT_EQ(UBigInt(first) <= second, first <= second);
+    ASSERT_EQ(first <= UBigInt(second), first <= second);
+  }
+}
+TEST_F(Sub64OperatorTests, GETest) {
+  for (size_t i = 0; i < 1000; i++) {
+    auto first = dist(rng);
+    auto second = dist(rng);
+    ASSERT_TRUE(UBigInt(first) >= UBigInt(first));
+    ASSERT_TRUE(UBigInt(first) >= first);
+    ASSERT_TRUE(first >= UBigInt(first));
+    ASSERT_EQ(UBigInt(first) >= UBigInt(second), first >= second);
+    ASSERT_EQ(UBigInt(first) >= second, first >= second);
+    ASSERT_EQ(first >= UBigInt(second), first >= second);
+  }
+}
+TEST_F(Sub64OperatorTests, EQTest) {
+  for (size_t i = 0; i < 100000; i++) {
+    auto first = dist(rng);
+    auto second = dist(rng);
+    ASSERT_TRUE(UBigInt(first) == UBigInt(first));
+    ASSERT_TRUE(UBigInt(first) == first);
+    ASSERT_TRUE(first == UBigInt(first));
+    ASSERT_EQ(UBigInt(first) == UBigInt(second), first == second);
+    ASSERT_EQ(UBigInt(first) == second, first == second);
+    ASSERT_EQ(first == UBigInt(second), first == second);
+  }
+}
+TEST_F(Sub64OperatorTests, NETest) {
+  for (size_t i = 0; i < 100000; i++) {
+    auto first = dist(rng);
+    auto second = dist(rng);
+    ASSERT_FALSE(UBigInt(first) != UBigInt(first));
+    ASSERT_FALSE(UBigInt(first) != first);
+    ASSERT_FALSE(first != UBigInt(first));
+    ASSERT_EQ(UBigInt(first) != UBigInt(second), first != second);
+    ASSERT_EQ(UBigInt(first) != second, first != second);
+    ASSERT_EQ(first != UBigInt(second), first != second);
+  }
+}
+
+TEST_F(Sub64OperatorTests, LeftShiftTest) {
+  for (size_t i = 0; i < 1000; ++i) {
+    auto first = dist(rng) % (1ull << 48);
+    auto second = dist(rng) % 16;
+    UBigInt number;
+    ASSERT_EQ(UBigInt(first) << 0, first);
+    ASSERT_EQ((number = first) <<= 0, first);
+    ASSERT_EQ(UBigInt(first) << second, first << second);
+    ASSERT_EQ((number = first) <<= second, first << second);
+    first = dist(rng);
+    second = dist(rng) % 1024;
+    ASSERT_EQ(UBigInt(first) << second,
+              UBigInt(first) * Power(UBigInt(2), second));
+  }
+}
+TEST_F(Sub64OperatorTests, RightShiftTest) {
+  for (size_t i = 0; i < 1000; ++i) {
+    auto first = dist(rng);
+    auto second = dist(rng) % 64;
+    UBigInt number;
+    ASSERT_EQ(UBigInt(first) >> 0, first);
+    ASSERT_EQ((number = first) >>= 0, first);
+    ASSERT_EQ(UBigInt(first) >> second, first >> second);
+    ASSERT_EQ((number = first) >>= second, first >> second);
+  }
+}
