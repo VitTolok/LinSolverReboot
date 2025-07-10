@@ -501,6 +501,34 @@ UBigInt Power(const UBigInt &base, size_t power) {
   return result;
 }
 
+UBigInt GCD(const UBigInt &first, const UBigInt &second) {
+  if (first == second) {
+    return first;
+  }
+  if (first == 1 || second == 1) {
+    return UBigInt(1);
+  }
+  UBigInt f = first;
+  UBigInt s = second;
+  size_t power_of_2 = 0;
+  while (f != 0 && s != 0) {
+    auto f_mod2 = static_cast<u_int32_t>(f % 2);
+    auto s_mod2 = static_cast<u_int32_t>(s % 2);
+    if ((f_mod2 == 0) && (s_mod2 == 0)) {
+      power_of_2++;
+      f >>= 1;
+      s >>= 1;
+    } else if (f_mod2 == 0) {
+      f >>= 1;
+    } else if (s_mod2 == 0) {
+      s >>= 1;
+    } else {
+      const_cast<UBigInt &>(std::max(f, s)) -= std::min(f, s);
+    }
+  }
+  return std::max(f, s) * Power(UBigInt(2), power_of_2);
+}
+
 std::ostream &operator<<(std::ostream &out, const UBigInt &bigint) {
   if (bigint < 1'000'000) {
     return out << static_cast<u_int32_t>(bigint);

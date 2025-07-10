@@ -96,6 +96,7 @@ public:
   explicit operator u_int32_t() const;
 
   friend UBigInt Power(const UBigInt &, size_t);
+  friend UBigInt GCD(const UBigInt &, const UBigInt &);
 
   friend std::ostream &operator<<(std::ostream &, const UBigInt &);
   friend std::istream &operator>>(std::istream &, UBigInt &);
