@@ -18,6 +18,7 @@ BigInt &BigInt::operator=(int64_t number) {
   } else {
     abs_ = std::abs(number);
   }
+  return *this;
 }
 
 BigInt &operator+=(BigInt &first, const BigInt &second) {
