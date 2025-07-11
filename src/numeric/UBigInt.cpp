@@ -71,6 +71,15 @@ UBigInt &operator-=(UBigInt &first, const UBigInt &second) {
     first.storage_[i] =
         static_cast<u_int32_t>((available + (1ull << 32)) - subtracted);
   }
+  for (size_t i = second.storage_.size(); debt > 0 && i < first.storage_.size();
+       i++) {
+    if (first.storage_[i] >= debt) {
+      first.storage_[i] -= debt;
+      break;
+    }
+    first.storage_[i] =
+        (1ull << 32) + static_cast<u_int64_t>(first.storage_[i]) - debt;
+  }
   first.Shrink();
   return first;
 }
@@ -507,6 +516,12 @@ UBigInt GCD(const UBigInt &first, const UBigInt &second) {
   }
   if (first == 1 || second == 1) {
     return UBigInt(1);
+  }
+  if (first == 0) {
+    return second;
+  }
+  if (second == 0) {
+    return first;
   }
   UBigInt f = first;
   UBigInt s = second;

@@ -445,3 +445,13 @@ INSTANTIATE_TEST_SUITE_P(
                                       "1234567890987654321234567890",
                                       "776277924387082950875329041"),
                       std::make_tuple("4e500", "5e495", "0")));
+
+class Sub64GCDTest : public RandomIntTests {};
+
+TEST_F(Sub64GCDTest, GCDTest) {
+  for (size_t i = 0; i < 1000; i++) {
+    auto first = dist(rng);
+    auto second = dist(rng);
+    ASSERT_EQ(GCD(UBigInt(first), UBigInt(second)), std::gcd(first, second));
+  }
+}
