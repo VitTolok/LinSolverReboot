@@ -171,8 +171,8 @@ TEST_F(Sub64OperatorTests, DivTest) {
     auto first = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
     auto second = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
     UBigInt number(first);
-    ASSERT_THROW(UBigInt(first) / 0, UBigIntDivisionByZero);
-    ASSERT_THROW(number /= 0, UBigIntDivisionByZero);
+    ASSERT_THROW(UBigInt(first) / 0, BigIntDivisionByZero);
+    ASSERT_THROW(number /= 0, BigIntDivisionByZero);
     ASSERT_EQ(UBigInt(first) / 1, first);
     ASSERT_EQ(UBigInt(first) / UBigInt(second), first / second);
     ASSERT_EQ(UBigInt(first) / second, first / second);
@@ -187,8 +187,8 @@ TEST_F(Sub64OperatorTests, ModTest) {
     auto first = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
     auto second = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
     UBigInt number(first);
-    ASSERT_THROW(UBigInt(first) % 0, UBigIntDivisionByZero);
-    ASSERT_THROW(number %= 0, UBigIntDivisionByZero);
+    ASSERT_THROW(UBigInt(first) % 0, BigIntDivisionByZero);
+    ASSERT_THROW(number %= 0, BigIntDivisionByZero);
     ASSERT_EQ(UBigInt(first) % 1, 0);
     ASSERT_EQ(UBigInt(first) % UBigInt(second), first % second);
     ASSERT_EQ(UBigInt(first) % second, first % second);

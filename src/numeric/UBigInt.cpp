@@ -281,7 +281,7 @@ UBigInt &operator*=(UBigInt &bigint, u_int64_t number) {
 
 UBigInt &operator/=(UBigInt &bigint, u_int64_t div) {
   if (div == 0) {
-    throw UBigIntDivisionByZero();
+    throw BigIntDivisionByZero();
   }
   if (div == 1 || bigint == 0) {
     return bigint;
@@ -303,7 +303,7 @@ UBigInt &operator/=(UBigInt &bigint, u_int64_t div) {
 }
 UBigInt &operator%=(UBigInt &bigint, u_int64_t div) {
   if (div == 0) {
-    throw UBigIntDivisionByZero();
+    throw BigIntDivisionByZero();
   }
   if (div == 1 || bigint == 0) {
     return bigint = 0;
@@ -585,7 +585,7 @@ std::istream &operator>>(std::istream &in, UBigInt &bigint) {
     try {
       std::istringstream(input.c_str() + sep + 1) >> power;
     } catch (...) {
-      throw UBigIntInvalidString();
+      throw BigIntInvalidString();
     }
     input.resize(sep);
     size_t dot = input.find('.');
