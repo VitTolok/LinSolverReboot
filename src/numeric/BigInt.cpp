@@ -467,7 +467,7 @@ BigInt::operator int64_t() const {
 const UBigInt &BigInt::Abs() const noexcept { return abs_; }
 
 std::ostream &operator<<(std::ostream &out, const BigInt &bigint) {
-  if (!bigint.pos_) {
+  if (!bigint.pos_ && bigint.abs_ != 0) {
     out << '-';
   }
   return out << bigint.abs_;
@@ -478,7 +478,7 @@ std::istream &operator>>(std::istream &in, BigInt &bigint) {
   in >> input;
   if (!input.empty() && input[0] == '-') {
     bigint.pos_ = false;
-    input.erase(0);
+    input.erase(0, 1);
   } else {
     bigint.pos_ = true;
   }
