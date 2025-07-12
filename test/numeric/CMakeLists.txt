@@ -7,5 +7,18 @@ target_link_libraries(rational_test PRIVATE
   rational
   GTest_core
 )
+add_executable(UBigInt_test ${CMAKE_SOURCE_DIR}/test/numeric/UBigInt_test.cpp)
+target_include_directories(UBigInt_test PRIVATE ${CMAKE_SOURCE_DIR}/include/numeric)
+target_link_libraries(UBigInt_test PRIVATE
+  UBigInt
+  GTest_core
+)
+add_executable(BigInt_test ${CMAKE_SOURCE_DIR}/test/numeric/BigInt_test.cpp)
+target_include_directories(BigInt_test PRIVATE ${CMAKE_SOURCE_DIR}/include/numeric)
+target_link_libraries(BigInt_test PRIVATE
+  BigInt
+  GTest_core
+)
 
 gtest_discover_tests(rational_test)
+gtest_discover_tests(UBigInt_test)

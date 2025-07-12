@@ -1,4 +1,5 @@
 #pragma once
+#include "BigInt.hpp"
 #include "definitions.hpp"
 #include <cstdint>
 #include <iostream>
@@ -15,8 +16,8 @@ private:
 
 class Rational {
 public:
-  const int64_t &Num() const;
-  const uint64_t &Den() const;
+  const BigInt &Num() const;
+  const UBigInt &Den() const;
 
   friend Rational &operator+=(Rational &, const Rational &);
   friend Rational &operator-=(Rational &, const Rational &);
@@ -33,6 +34,10 @@ public:
   explicit Rational(int64_t);
   Rational(int64_t, int64_t);
   Rational(int64_t, uint64_t);
+  explicit Rational(const BigInt &);
+  explicit Rational(BigInt &&);
+  Rational(const BigInt &, const BigInt &);
+  Rational(const BigInt &, const UBigInt &);
 
   friend bool operator<(const Rational &, const Rational &);
   friend bool operator>(const Rational &, const Rational &);
@@ -45,7 +50,7 @@ public:
   friend std::istream &operator>>(std::istream &, Rational &);
 
 private:
-  int64_t num_;
-  uint64_t den_;
+  BigInt num_;
+  UBigInt den_;
   void Normalize();
 };
