@@ -3,17 +3,17 @@
 #include <numeric>
 #include <sstream>
 
-const int64_t &Rational::Num() const { return this->num_; }
-const uint64_t &Rational::Den() const { return this->den_; }
+const BigInt &Rational::Num() const { return this->num_; }
+const UBigInt &Rational::Den() const { return this->den_; }
 
 Rational &operator+=(Rational &base, const Rational &mod) {
-  base.num_ = (base.num_ * mod.den_) + (mod.num_ * base.den_);
+  (base.num_ *= mod.den_) += (mod.num_ * base.den_);
   base.den_ *= mod.den_;
   base.Normalize();
   return base;
 }
 Rational &operator-=(Rational &base, const Rational &mod) {
-  base.num_ = (base.num_ * mod.den_) - (mod.num_ * base.den_);
+  (base.num_ *= mod.den_) -= (mod.num_ * base.den_);
   base.den_ *= mod.den_;
   base.Normalize();
   return base;
@@ -26,9 +26,9 @@ Rational &operator*=(Rational &base, const Rational &mod) {
 }
 Rational &operator/=(Rational &base, const Rational &mod) {
   base.num_ *= mod.den_;
-  base.den_ *= std::abs(mod.num_);
+  base.den_ *= mod.num_.Abs();
   if (mod.num_ < 0) {
-    base.num_ = -base.num_;
+    base.num_ *= -1;
   }
   base.Normalize();
   return base;
@@ -72,6 +72,23 @@ Rational::Rational(int64_t num, uint64_t den) : num_(num), den_(den) {
   this->Normalize();
 }
 
+Rational::Rational(const BigInt &number) : num_(number), den_(1u) {}
+Rational::Rational(BigInt &&number) : num_(std::move(number)), den_(1u) {}
+Rational::Rational(const BigInt &num, const BigInt &den) {
+  if (den < 0) {
+    num_ = num * (-1);
+    den_ = den.Abs();
+  } else {
+    num_ = num;
+    den_ = den.Abs();
+  }
+  this->Normalize();
+}
+Rational::Rational(const BigInt &num, const UBigInt &den)
+    : num_(num), den_(den) {
+  this->Normalize();
+}
+
 bool operator<(const Rational &first, const Rational &second) {
   return (first.num_ * second.den_) < (second.num_ * first.den_);
 }
@@ -108,22 +125,36 @@ std::istream &operator>>(std::istream &in, Rational &number) try {
     number.Normalize();
     return in;
   }
-  sep = input.find('.');
-  if (sep < input.size()) {
-    std::istringstream(input.substr(0, sep)) >> number.num_;
-    number.den_ = 1u;
-    for (size_t i = 0; i < input.size() - sep - 1; i++) {
-      number.num_ *= 10;
-      number.den_ *= 10;
+  size_t dot = input.find('.');
+  size_t exp = input.find('e');
+  size_t mult = 0;
+  if (exp < input.size() && dot < exp) {
+    std::istringstream(input.substr(exp)) >> mult;
+    if (mult >= (exp - dot) - 1) {
+      std::istringstream(input) >> number.num_;
+      number.den_ = 1;
+      return in;
     }
-    uint64_t leftover = 0u;
-    std::istringstream(input.substr(sep + 1, input.size())) >> leftover;
-    number.num_ += static_cast<int64_t>(leftover) * (input[0] == '-' ? -1 : 1);
-    number.Normalize();
+  }
+  if (dot >= input.size()) {
+    std::istringstream(input) >> number.num_;
+    number.den_ = 1u;
     return in;
   }
-  std::istringstream(input) >> number.num_;
-  number.den_ = 1u;
+  if (exp >= input.size()) {
+    exp = input.size();
+  }
+  std::istringstream(input.substr(0, dot)) >> number.num_;
+  number.num_ *= Power(UBigInt(10), (exp - dot) - 1);
+  std::istringstream(input.substr(dot + 1, (exp - dot) - 1)) >> number.den_;
+  if (input[0] == '-') {
+    number.num_ -= number.den_;
+  } else {
+    number.num_ += number.den_;
+  }
+  number.den_ = Power(UBigInt(10), (exp - dot) - 1);
+  number.num_ *= Power(UBigInt(10), mult);
+  number.Normalize();
   return in;
 } catch (...) {
   throw InvalidRationalString();
@@ -136,9 +167,8 @@ void Rational::Normalize() {
   if (this->den_ == 0u) {
     throw InvalidRational();
   }
-  uint64_t gcd =
-      std::gcd(static_cast<uint64_t>(std::abs(this->num_)), this->den_);
-  this->num_ /= static_cast<int64_t>(gcd);
+  UBigInt gcd = GCD(num_.Abs(), den_);
+  this->num_ /= gcd;
   this->den_ /= gcd;
   return;
 }

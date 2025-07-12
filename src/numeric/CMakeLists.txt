@@ -10,3 +10,4 @@ target_include_directories(UBigInt PUBLIC ${CMAKE_SOURCE_DIR}/include/numeric ${
 target_include_directories(BigInt PUBLIC ${CMAKE_SOURCE_DIR}/include/numeric ${CMAKE_SOURCE_DIR}/include)
 
 target_link_libraries(BigInt PUBLIC UBigInt)
+target_link_libraries(rational PUBLIC BigInt)
