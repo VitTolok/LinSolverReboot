@@ -4,37 +4,37 @@
 #include <iostream>
 
 class UBigIntUnderflow : public MachineError {
-public:
+ public:
   [[nodiscard]] const char *what() const noexcept override {
     return message_.c_str();
   }
 
-private:
+ private:
   std::string message_ = "The unsigned big integer cannot go negative";
 };
 
 class BigIntInvalidString : public MachineError {
-public:
+ public:
   [[nodiscard]] const char *what() const noexcept override {
     return message_.c_str();
   }
 
-private:
+ private:
   std::string message_ = "Use either full integers or '1.01612e288' form";
 };
 
 class BigIntDivisionByZero : public MachineError {
-public:
+ public:
   [[nodiscard]] const char *what() const noexcept override {
     return message_.c_str();
   }
 
-private:
+ private:
   std::string message_ = "Can't divide by 0";
 };
 
 class UBigInt {
-public:
+ public:
   UBigInt();
   explicit UBigInt(u_int64_t);
   UBigInt(const UBigInt &) = default;
@@ -104,7 +104,7 @@ public:
 
   ~UBigInt() = default;
 
-private:
+ private:
   std::deque<u_int32_t> storage_;
   void Shrink() noexcept;
 };

@@ -2,7 +2,8 @@
 #include <limits>
 #include <sstream>
 
-BigInt::BigInt() : pos_(false), abs_() {}
+BigInt::BigInt() : pos_(false), abs_() {
+}
 BigInt::BigInt(int64_t number) : pos_(number > 0), abs_() {
   if (number == std::numeric_limits<int64_t>::min()) {
     abs_ = (1ull << 63);
@@ -359,7 +360,9 @@ bool operator<(const BigInt &bigint, int64_t number) {
   }
   return !bigint.pos_;
 }
-bool operator>(const BigInt &bigint, int64_t number) { return number < bigint; }
+bool operator>(const BigInt &bigint, int64_t number) {
+  return number < bigint;
+}
 bool operator<=(const BigInt &bigint, int64_t number) {
   return !(number < bigint);
 }
@@ -413,7 +416,9 @@ bool operator<(int64_t number, const BigInt &bigint) {
   }
   return bigint.pos_;
 }
-bool operator>(int64_t number, const BigInt &bigint) { return bigint < number; }
+bool operator>(int64_t number, const BigInt &bigint) {
+  return bigint < number;
+}
 bool operator<=(int64_t number, const BigInt &bigint) {
   return !(bigint < number);
 }
@@ -464,7 +469,9 @@ BigInt::operator int64_t() const {
   return static_cast<int64_t>(modulus) * (pos_ ? 1 : -1);
 }
 
-const UBigInt &BigInt::Abs() const noexcept { return abs_; }
+const UBigInt &BigInt::Abs() const noexcept {
+  return abs_;
+}
 
 std::ostream &operator<<(std::ostream &out, const BigInt &bigint) {
   if (!bigint.pos_ && bigint.abs_ != 0) {
@@ -486,4 +493,6 @@ std::istream &operator>>(std::istream &in, BigInt &bigint) {
   return in;
 }
 
-std::string BigInt::Exact() const { return (pos_ ? "" : "-") + abs_.Exact(); }
+std::string BigInt::Exact() const {
+  return ((pos_ || (abs_ == 0)) ? "" : "-") + abs_.Exact();
+}
