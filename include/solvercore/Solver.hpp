@@ -25,7 +25,7 @@ class Solver {
 public:
   virtual void operator()(std::unique_ptr<Solvable> &&) = 0;
   virtual int16_t Progress() const = 0;
-  virtual const std::shared_ptr<Solution> &GetResult() const = 0;
+  virtual const Solution *GetResult() const = 0;
   virtual bool Finished() const = 0;
   virtual ~Solver() = 0;
 };

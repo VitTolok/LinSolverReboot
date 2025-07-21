@@ -5,11 +5,10 @@
 class Process {
 public:
   enum class ProcType { kDecompProc };
-  enum class NumericType { kDouble };
   Process(ProcType, std::unique_ptr<Solvable> &&);
   int16_t Progress() const;
   bool Finished() const;
-  const std::shared_ptr<Solution> &GetSolution() const;
+  const Solution *GetSolution() const;
   ProcType GetProcType() const;
 
 private:

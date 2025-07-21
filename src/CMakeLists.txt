@@ -1,14 +1,15 @@
 add_subdirectory(numeric)
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+add_subdirectory(GUI)
 
 set (CMAKE_EXPORT_COMPILE_COMMANDS true)
 
-add_executable(my_qt_app
+add_executable(LinSolver
     main.cpp
 )
-
-target_link_libraries(my_qt_app
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
+target_include_directories(LinSolver PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+  ${CMAKE_SOURCE_DIR}/include/GUI
+  ${CMAKE_SOURCE_DIR}/include/solvercore)
+target_link_libraries(LinSolver PRIVATE
+    MainWindow
 )

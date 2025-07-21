@@ -1,12 +1,25 @@
 #pragma once
 #include "Process.hpp"
-#include <qt6/QtWidgets/QtWidgets>
+#include "ui_MainWindow.h"
+#include <memory>
+#include <qt6/QtWidgets/QMainWindow>
 #include <set>
 
-class MainWindow {
+namespace Ui {
+class MainWindow;
+}
+
+class MainWindow : public QMainWindow {
+  Q_OBJECT
+
+private slots:
+  void dummySlot() {}
+
 public:
-  MainWindow();
+  explicit MainWindow(QWidget *parent = nullptr);
+  ~MainWindow() override;
 
 private:
+  Ui::MainWindow *ui;
   std::set<Process> procs_;
 };
