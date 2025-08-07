@@ -3,41 +3,37 @@
 #include "TestSolver.hpp"
 #include "ui_Process.h"
 
-void Execute(Solver *solver, std::unique_ptr<Solvable> &&ptr) {
-  try {
-    (*solver)(std::move(ptr));
-  } catch (const std::exception &e) {
-    qCritical() << "Solver error:" << e.what();
-  }
+ProgressReport::ProgressReport(QProgressBar *ptr) : progress_bar_(ptr) {
 }
 
-Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&ptr, QWidget *parent) : QWidget(parent) {
+void ProgressReport::operator=(int16_t) {
+}
+
+void Execute(Solver *solver, const Solvable *ptr) {
+  (*solver)(ptr);
+}
+
+void Finisher(Process *process, Solution *solution) {
+  process->solution_ = solution;
+  process->finished_ = true;
+}
+void Terminator(Process *process, std::exception *exception) {
+  process->error_ = exception;
+  process->finished_ = true;
+}
+
+Process::Process(ProcType proc_type, Solvable *ptr, QProgressBar *progress_bar_, QWidget *parent)
+    : QWidget(parent), progress_(progress_bar_), solvable_(ptr) {
   type_ = proc_type;
   switch (proc_type) {
-    case ProcType::kDecompProc:
-      solver_ = MakeDecompSolver(ptr.get());
-      break;
     case ProcType::kTestProc:
-      solver_ = std::make_unique<TestSolver>();
-      break;
-    default:
-      throw InvalidSolutionType();
+      solver_ = std::make_unique<TestSolver>(
+          &progress_, [this](Solution *s) -> void { Finisher(this, s); },
+          [this](std::exception *e) -> void { Terminator(this, e); });
   }
-  thread_ = std::thread(Execute, solver_.get(), std::move(ptr));
+  thread_ = std::thread(Execute, solver_.get(), ptr);
   ui = new Ui::Process;
   ui->setupUi(this);
-}
-
-int16_t Process::Progress() const {
-  return solver_->Progress();
-}
-
-bool Process::Finished() const {
-  return solver_->Finished();
-}
-
-const Solution *Process::GetSolution() const {
-  return solver_->GetResult();
 }
 
 Process::ProcType Process::GetProcType() const {
@@ -52,5 +48,16 @@ Process::~Process() {
   if (thread_.joinable()) {
     thread_.join();
   }
-  delete ui;
+  if (ui) {
+    delete ui;
+  }
+  if (solvable_) {
+    delete solvable_;
+  }
+  if (solution_) {
+    delete solution_;
+  }
+  if (error_) {
+    delete error_;
+  }
 }

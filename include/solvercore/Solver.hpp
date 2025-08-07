@@ -1,6 +1,7 @@
 #pragma once
 #include "definitions.hpp"
 #include <cstdint>
+#include <functional>
 
 class InvalidSolutionType : public MachineError {
  public:
@@ -30,7 +31,7 @@ struct Solution {
 
 class Solver {
  public:
-  Solver(Progress *progress, void (*finisher)(Solution *), void (*terminator)(std::exception *))
+  Solver(Progress *progress, std::function<void(Solution *)> finisher, std::function<void(std::exception *)> terminator)
       : progress_(progress), finisher_(finisher), terminator_(terminator) {
   }
   virtual void operator()(const Solvable *) const = 0;
@@ -48,6 +49,6 @@ class Solver {
   Progress *progress_;
 
  private:
-  void (*finisher_)(Solution *);
-  void (*terminator_)(std::exception *);
+  std::function<void(Solution *)> finisher_;
+  std::function<void(std::exception *)> terminator_;
 };

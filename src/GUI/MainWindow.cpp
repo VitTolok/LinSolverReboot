@@ -8,8 +8,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui_(new Ui::MainW
   auto stack = new QVBoxLayout(scroll_content);
   ui_->scrollArea->setWidget(scroll_content);
   for (size_t i = 0; i < 500; i++) {
-    auto solvable = std::make_unique<TestSolvable>(1);
-    auto process = std::make_unique<Process>(Process::ProcType::kTestProc, std::move(solvable), this);
+    auto solvable = new TestSolvable(1);
+    auto process = std::make_unique<Process>(Process::ProcType::kTestProc, solvable, ui_->progressBar, this);
     stack->insertWidget(0, process.get());
     process->setMinimumHeight(90);
     process->setMinimumWidth(100);

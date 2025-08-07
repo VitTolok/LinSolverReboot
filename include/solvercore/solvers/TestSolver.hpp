@@ -19,7 +19,8 @@ struct TestSolution : public Solution {
 
 class TestSolver : public Solver {
  public:
-  TestSolver(Progress *progress, void (*finisher)(Solution *), void (*terminator)(std::exception *))
+  TestSolver(Progress *progress, std::function<void(Solution *)> finisher,
+             std::function<void(std::exception *)> terminator)
       : Solver(progress, finisher, terminator) {
   }
 
