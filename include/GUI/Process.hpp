@@ -34,7 +34,7 @@ class Process : public QWidget {
 
  private:
   Solvable *solvable_;
-  Ui::Process *ui;
+  Ui::Process *ui_;
   ProcType type_;
   std::thread thread_;
   std::unique_ptr<Solver> solver_;

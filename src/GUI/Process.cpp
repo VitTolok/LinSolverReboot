@@ -22,9 +22,15 @@ void Terminator(Process *process, std::exception *exception) {
   process->finished_ = true;
 }
 
-Process::Process(ProcType proc_type, Solvable *ptr, QProgressBar *progress_bar_, QWidget *parent)
-    : QWidget(parent), progress_(progress_bar_), solvable_(ptr) {
-  type_ = proc_type;
+Process::Process(ProcType proc_type, Solvable *ptr, QProgressBar *progress_bar, QWidget *parent)
+    : QWidget(parent)
+    , progress_(progress_bar)
+    , solvable_(ptr)
+    , type_(proc_type)
+    , start_(std::chrono::steady_clock::now())
+    , finished_(false)
+    , error_(nullptr)
+    , solution_(nullptr) {
   switch (proc_type) {
     case ProcType::kTestProc:
       solver_ = std::make_unique<TestSolver>(
@@ -32,8 +38,8 @@ Process::Process(ProcType proc_type, Solvable *ptr, QProgressBar *progress_bar_,
           [this](std::exception *e) -> void { Terminator(this, e); });
   }
   thread_ = std::thread(Execute, solver_.get(), ptr);
-  ui = new Ui::Process;
-  ui->setupUi(this);
+  ui_ = new Ui::Process;
+  ui_->setupUi(this);
 }
 
 Process::ProcType Process::GetProcType() const {
@@ -48,8 +54,8 @@ Process::~Process() {
   if (thread_.joinable()) {
     thread_.join();
   }
-  if (ui) {
-    delete ui;
+  if (ui_) {
+    delete ui_;
   }
   if (solvable_) {
     delete solvable_;
