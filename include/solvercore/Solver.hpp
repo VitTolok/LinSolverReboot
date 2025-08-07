@@ -1,31 +1,53 @@
 #pragma once
 #include "definitions.hpp"
 #include <cstdint>
-#include <memory>
 
 class InvalidSolutionType : public MachineError {
-public:
+ public:
   [[nodiscard]] const char *what() const noexcept override {
     return message_.c_str();
   }
 
-private:
+ private:
   std::string message_ = "Solver received input of the wrong type";
 };
 
 struct Solvable {
-  virtual ~Solvable() = 0;
+  virtual ~Solvable() {
+  }
+};
+
+struct Progress {
+  virtual void operator=(int16_t) = 0;
+  virtual ~Progress() {
+  }
 };
 
 struct Solution {
-  virtual ~Solution() = 0;
+  virtual ~Solution() {
+  }
 };
 
 class Solver {
-public:
-  virtual void operator()(std::unique_ptr<Solvable> &&) = 0;
-  virtual int16_t Progress() const = 0;
-  virtual const Solution *GetResult() const = 0;
-  virtual bool Finished() const = 0;
-  virtual ~Solver() = 0;
+ public:
+  Solver(Progress *progress, void (*finisher)(Solution *), void (*terminator)(std::exception *))
+      : progress_(progress), finisher_(finisher), terminator_(terminator) {
+  }
+  virtual void operator()(const Solvable *) const = 0;
+  virtual ~Solver() {
+  }
+
+  void Terminate(std::exception *exception) const {
+    terminator_(exception);
+  }
+
+  void Finish(Solution *solution) const {
+    finisher_(solution);
+  }
+
+  Progress *progress_;
+
+ private:
+  void (*finisher_)(Solution *);
+  void (*terminator_)(std::exception *);
 };

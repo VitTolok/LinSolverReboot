@@ -12,14 +12,15 @@ class MainWindow;
 class MainWindow : public QMainWindow {
   Q_OBJECT
 
-private slots:
-  void dummySlot() {}
+ private slots:
+  void dummySlot() {
+  }
 
-public:
+ public:
   explicit MainWindow(QWidget *parent = nullptr);
   ~MainWindow() override;
 
-private:
-  Ui::MainWindow *ui;
-  std::set<Process> procs_;
+ private:
+  Ui::MainWindow *ui_;
+  std::set<std::unique_ptr<Process>> procs_;
 };

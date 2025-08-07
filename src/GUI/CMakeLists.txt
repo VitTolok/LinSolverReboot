@@ -6,13 +6,26 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_AUTOUIC_SEARCH_PATHS 
   ${CMAKE_SOURCE_DIR}/include/GUI/ui
+  ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+qt6_wrap_ui(MainWindow_UI_FILES
+  ${CMAKE_SOURCE_DIR}/include/GUI/ui/MainWindow.ui
+)
+qt6_wrap_ui(Process_UI_FILES
+  ${CMAKE_SOURCE_DIR}/include/GUI/ui/Process.ui
 )
 
 add_library(MainWindow STATIC
   MainWindow.cpp
   ${CMAKE_SOURCE_DIR}/include/GUI/MainWindow.hpp
+  ${MainWindow_UI_FILES}
 )
-add_library(Process SHARED Process.cpp)
+add_library(Process STATIC
+  Process.cpp
+  ${CMAKE_SOURCE_DIR}/include/GUI/Process.hpp
+  ${Process_UI_FILES}
+)
 
 target_include_directories(MainWindow PUBLIC
   ${CMAKE_SOURCE_DIR}/include/GUI
@@ -25,6 +38,14 @@ target_include_directories(Process PUBLIC
   ${CMAKE_SOURCE_DIR}/include
   ${CMAKE_SOURCE_DIR}/include/solvercore
   ${CMAKE_SOURCE_DIR}/include/solvercore/solvers
+  ${CMAKE_CURRENT_BINARY_DIR} 
+)
+
+target_link_libraries(Process PUBLIC
+  Qt6::Core
+  Qt6::Gui
+  Qt6::Widgets
+  Qt6::UiTools
 )
 
 target_link_libraries(MainWindow PUBLIC
@@ -32,11 +53,5 @@ target_link_libraries(MainWindow PUBLIC
   Qt6::Gui
   Qt6::Widgets
   Qt6::UiTools
+  Process
 )
-
-if(TARGET Qt6::uic)
-  qt6_wrap_ui(MainWindow_UI_FILES
-    ${CMAKE_SOURCE_DIR}/include/GUI/ui/MainWindow.ui
-  )
-  target_sources(MainWindow PRIVATE ${MainWindow_UI_FILES})
-endif()
