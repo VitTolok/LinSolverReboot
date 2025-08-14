@@ -12,4 +12,6 @@ target_include_directories(LinSolver PRIVATE
   ${CMAKE_SOURCE_DIR}/include/solvercore)
 target_link_libraries(LinSolver PRIVATE
     MainWindow
+    Qt6::Widgets
+    Qt6::Core
 )

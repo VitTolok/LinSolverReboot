@@ -19,6 +19,8 @@ qt6_wrap_ui(Process_UI_FILES
 add_library(MainWindow STATIC
   MainWindow.cpp
   ${CMAKE_SOURCE_DIR}/include/GUI/MainWindow.hpp
+  ${CMAKE_SOURCE_DIR}/include/GUI/Interface.hpp
+  ${CMAKE_SOURCE_DIR}/include/GUI/interfaces/TestInterface.hpp
   ${MainWindow_UI_FILES}
 )
 add_library(Process STATIC
@@ -28,6 +30,7 @@ add_library(Process STATIC
 )
 
 target_include_directories(MainWindow PUBLIC
+  ${CMAKE_SOURCE_DIR}/include/GUI/interfaces
   ${CMAKE_SOURCE_DIR}/include/GUI
   ${CMAKE_SOURCE_DIR}/include
   ${CMAKE_SOURCE_DIR}/include/solvercore

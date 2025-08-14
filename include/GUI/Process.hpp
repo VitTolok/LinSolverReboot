@@ -2,15 +2,19 @@
 #include "Solver.hpp"
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QProgressBar>
+#include <mutex>
 #include <thread>
 namespace Ui {
 class Process;
 }
 
+class Interface;
+
 struct ProgressReport : public Progress {
  public:
   ProgressReport(QProgressBar *);
   void operator=(int16_t prog) override;
+  void Report();
   ~ProgressReport() override {
   }
 
@@ -24,13 +28,11 @@ class Process : public QWidget {
 
  public:
   enum class ProcType { kDecompProc, kTestProc };
-  Process(ProcType, Solvable *, QProgressBar *, QWidget *parent = nullptr);
-  int16_t Progress() const;
-  bool Finished() const;
-  const Solution &GetSolution() const;
-  ProcType GetProcType() const;
+  Process(ProcType, Solvable *, Interface *, QWidget *parent = nullptr);
   ~Process() override;
   bool operator<(const Process &) const;
+  void ReleaseInterface();
+  void ReportToInterface();
 
  private:
   Solvable *solvable_;
@@ -44,6 +46,7 @@ class Process : public QWidget {
   bool finished_;
   std::exception *error_;
   Solution *solution_;
+  std::mutex mutex_;
 
   friend void Finisher(Process *process, Solution *solution);
   friend void Terminator(Process *process, std::exception *solution);
