@@ -24,7 +24,7 @@ class TestSolver : public Solver {
       : Solver(progress, finisher, terminator) {
   }
 
-  virtual void operator()(const Solvable *solvable) const override {
+  virtual void operator()(const Solvable *solvable) const override try {
     auto input = dynamic_cast<const TestSolvable *>(solvable);
     if (input == nullptr) {
       Terminate(new InvalidSolutionType{});
@@ -44,6 +44,8 @@ class TestSolver : public Solver {
       default:
         Terminate(new MachineError{});
     }
+  } catch (std::exception *e) {
+    Terminate(e);
   }
 
   ~TestSolver() override {

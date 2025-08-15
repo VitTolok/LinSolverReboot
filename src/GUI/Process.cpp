@@ -3,20 +3,26 @@
 #include "TestSolver.hpp"
 #include "ui_Process.h"
 
-ProgressReport::ProgressReport(QProgressBar *ptr) : progress_bar_(ptr) {
+ProgressReport::ProgressReport(QProgressBar *ptr)
+    : progress_bar_(ptr), active(true), terminate_signal(false), progress_(0) {
 }
 
 void ProgressReport::operator=(int16_t progress) {
-  if (progress_bar_) {
+  if (terminate_signal) {
+    throw new TerminationBreak{};
+  }
+  if (active && progress_bar_) {
     progress_bar_->setValue(progress);
   }
   progress_ = progress;
 }
 
 void ProgressReport::Report() {
-  if (progress_bar_) {
-    progress_bar_->setValue(progress_);
-  }
+  (*this) = progress_;
+}
+
+void ProgressReport::Terminate() {
+  terminate_signal = true;
 }
 
 void Execute(Solver *solver, const Solvable *ptr) {
@@ -24,6 +30,7 @@ void Execute(Solver *solver, const Solvable *ptr) {
 }
 
 void Finisher(Process *process, Solution *solution) {
+  process->progress_ = 100;
   std::lock_guard lock(process->mutex_);
   process->solution_ = solution;
   process->finished_ = true;
@@ -31,7 +38,13 @@ void Finisher(Process *process, Solution *solution) {
   process->ui_->status->setText("Finished.");
 }
 void Terminator(Process *process, std::exception *exception) {
+  if (dynamic_cast<TerminationBreak *>(exception)) {
+    delete exception;
+    return;
+  }
+  process->progress_.Report();
   std::lock_guard lock(process->mutex_);
+  process->ui_->status->setText("Error.");
   process->error_ = exception;
   process->finished_ = true;
   process->end_ = std::chrono::steady_clock::now();
@@ -60,12 +73,13 @@ Process::Process(ProcType proc_type, Solvable *ptr, Interface *interface, QWidge
   thread_ = std::thread(Execute, solver_.get(), ptr);
 }
 
-bool Process::operator<(const Process &other) const {
-  return start_ < other.start_;
+const Ui::Process *Process::Ui() const {
+  return ui_;
 }
 
 Process::~Process() {
   std::lock_guard lock(mutex_);
+  progress_.Terminate();
   if (thread_.joinable()) {
     thread_.join();
   }

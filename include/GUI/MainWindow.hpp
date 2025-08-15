@@ -23,6 +23,8 @@ class MainWindow : public QMainWindow {
 
  private:
   Ui::MainWindow *ui_;
-  std::set<std::unique_ptr<Process>> procs_;
+  std::set<Process *> procs_;
   TestInterface test_interface_;
+
+  void Deleter(Process *);
 };

@@ -10,16 +10,21 @@ class Process;
 
 class Interface;
 
+class TerminationBreak : public std::exception {};
+
 struct ProgressReport : public Progress {
  public:
   ProgressReport(QProgressBar *);
   void operator=(int16_t prog) override;
   void Report();
+  void Terminate();
   ~ProgressReport() override {
   }
 
  private:
   int16_t progress_;
+  bool terminate_signal;
+  bool active;
   QProgressBar *progress_bar_;
 };
 
@@ -30,9 +35,9 @@ class Process : public QWidget {
   enum class ProcType { kDecompProc, kTestProc };
   Process(ProcType, Solvable *, Interface *, QWidget *parent = nullptr);
   ~Process() override;
-  bool operator<(const Process &) const;
   void ReleaseInterface();
   void ReportToInterface();
+  const Ui::Process *Ui() const;
 
  private:
   Solvable *solvable_;
