@@ -19,20 +19,20 @@ struct DecompSolution : public Solution {
 template <class Numeric>
 struct DecompSolver : public Solver {
  public:
-  DecompSolver(Progress *progress, std::function<void(Solution *)> finisher,
-               std::function<void(std::exception *)> terminator)
-      : Solver(progress, finisher, terminator), finished_(false), solution_() {
+  DecompSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
+               const std::function<void(std::exception &&)> &terminator)
+      : Solver(progress, finisher, terminator) {
   }
 
-  virtual void operator()(const Solvable *ptr) const override {
-    auto solvable = dynamic_cast<const DecompSolvable<Numeric> *>(ptr);
-    if (solvable == nullptr) {
+  virtual void operator()(const Solvable &solvable) const override {
+    auto decomp_solvable = dynamic_cast<const DecompSolvable<Numeric> *>(&solvable);
+    if (decomp_solvable == nullptr) {
       throw InvalidSolutionType();
     }
     try {
-      Finish(new DecompSolution<Numeric>(solvable->matrix));
-    } catch (const std::exception &e) {
-      Terminate(new std::exception(e));
+      Finish(DecompSolution<Numeric>(decomp_solvable->matrix));
+    } catch (std::exception &e) {
+      Terminate(std::move(e));
     }
   }
 
@@ -40,13 +40,12 @@ struct DecompSolver : public Solver {
 
  private:
   std::unique_ptr<DecompSolution<Numeric>> solution_;
-  int16_t progress_ = 0;
-  bool finished_ = false;
 };
 
-std::unique_ptr<Solver> MakeDecompSolver(Progress *progress, void (*finisher)(Solution *),
-                                         void (*terminator)(std::exception *), const Solvable *ptr) {
-  if (dynamic_cast<const DecompSolvable<double> *>(ptr) != nullptr) {
+std::unique_ptr<Solver> MakeDecompSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
+                                         const std::function<void(std::exception &&)> &terminator,
+                                         const Solvable &solvable) {
+  if (dynamic_cast<const DecompSolvable<double> *>(&solvable) != nullptr) {
     return std::make_unique<DecompSolver<double>>(progress, finisher, terminator);
   }
   throw InvalidSolutionType();

@@ -14,7 +14,7 @@ class TerminationBreak : public std::exception {};
 
 struct ProgressReport : public Progress {
  public:
-  ProgressReport(QProgressBar *);
+  ProgressReport(Interface &);
   void operator=(int16_t prog) override;
   void Report();
   void Terminate();
@@ -23,9 +23,9 @@ struct ProgressReport : public Progress {
 
  private:
   int16_t progress_;
-  bool terminate_signal;
-  bool active;
-  QProgressBar *progress_bar_;
+  bool terminate_signal_;
+  bool active_;
+  Interface &interface_;
 };
 
 class Process : public QWidget {
@@ -33,14 +33,14 @@ class Process : public QWidget {
 
  public:
   enum class ProcType { kDecompProc, kTestProc };
-  Process(ProcType, Solvable *, Interface *, QWidget *parent = nullptr);
+  Process(ProcType, std::unique_ptr<Solvable> &&, Interface &, QWidget *parent = nullptr);
   ~Process() override;
   void ReleaseInterface();
   void ReportToInterface();
   const Ui::Process *Ui() const;
 
  private:
-  Solvable *solvable_;
+  std::unique_ptr<Solvable> solvable_;
   Ui::Process *ui_;
   ProcType type_;
   std::thread thread_;
@@ -48,11 +48,10 @@ class Process : public QWidget {
   std::chrono::steady_clock::time_point start_;
   std::chrono::steady_clock::time_point end_;
   ProgressReport progress_;
-  bool finished_;
-  std::exception *error_;
-  Solution *solution_;
+  std::unique_ptr<std::exception> error_;
+  std::unique_ptr<Solution> solution_;
   std::mutex mutex_;
 
-  friend void Finisher(Process *process, Solution *solution);
-  friend void Terminator(Process *process, std::exception *solution);
+  friend void Finisher(Process &process, Solution &&solution);
+  friend void Terminator(Process &process, std::exception &&solution);
 };

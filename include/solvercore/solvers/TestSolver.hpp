@@ -19,33 +19,33 @@ struct TestSolution : public Solution {
 
 class TestSolver : public Solver {
  public:
-  TestSolver(Progress *progress, std::function<void(Solution *)> finisher,
-             std::function<void(std::exception *)> terminator)
+  TestSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
+             const std::function<void(std::exception &&)> &terminator)
       : Solver(progress, finisher, terminator) {
   }
 
-  virtual void operator()(const Solvable *solvable) const override try {
-    auto input = dynamic_cast<const TestSolvable *>(solvable);
+  virtual void operator()(const Solvable &solvable) const override try {
+    auto input = dynamic_cast<const TestSolvable *>(&solvable);
     if (input == nullptr) {
-      Terminate(new InvalidSolutionType{});
+      Terminate(InvalidSolutionType{});
       return;
     }
     switch (input->number) {
       case 0:
-        Finish(new TestSolution("zero"));
+        Finish(TestSolution("zero"));
         break;
       case 1:
         for (size_t prog = 0; prog < 100; prog++) {
           std::this_thread::sleep_for(std::chrono::milliseconds(100));
-          *progress_ = prog;
+          progress_ = prog;
         }
-        Finish(new TestSolution("one"));
+        Finish(TestSolution("one"));
         break;
       default:
-        Terminate(new MachineError{});
+        Terminate(MachineError{});
     }
-  } catch (std::exception *e) {
-    Terminate(e);
+  } catch (std::exception &exception) {
+    Terminate(std::move(exception));
   }
 
   ~TestSolver() override {

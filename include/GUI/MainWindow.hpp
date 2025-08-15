@@ -4,7 +4,7 @@
 #include "TestInterface.hpp"
 #include <memory>
 #include <qt6/QtWidgets/QMainWindow>
-#include <set>
+#include <map>
 
 namespace Ui {
 class MainWindow;
@@ -23,7 +23,7 @@ class MainWindow : public QMainWindow {
 
  private:
   Ui::MainWindow *ui_;
-  std::set<Process *> procs_;
+  std::map<const Process *, std::unique_ptr<Process>> procs_;
   TestInterface test_interface_;
 
   void Deleter(Process *);

@@ -11,7 +11,7 @@ class Interface : public QWidget {
   }
   virtual void ActivateInProgress(const Solvable *) = 0;
   virtual void ActivateSuccess(const Solvable *, const Solution *) = 0;
-  virtual void ActivateError(const Solvable *, const std::exception *) = 0;
+  virtual void ActivateError(const Solvable *, const std::exception &) = 0;
   virtual QProgressBar *ProgressBar() = 0;
   virtual ~Interface() {
   }

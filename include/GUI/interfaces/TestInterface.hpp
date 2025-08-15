@@ -10,7 +10,7 @@ class TestInterface : public Interface {
   }
   virtual void ActivateSuccess(const Solvable *, const Solution *) override {
   }
-  virtual void ActivateError(const Solvable *, const std::exception *) override {
+  virtual void ActivateError(const Solvable *, const std::exception &) override {
   }
   virtual QProgressBar *ProgressBar() override {
     return nullptr;
