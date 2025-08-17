@@ -13,6 +13,9 @@ struct DecompSolution : public Solution {
   DecompSolution(const Matrix<Numeric> &matrix) : decomp(matrix) {
   }
   Decompose<Numeric> decomp;
+  virtual std::unique_ptr<Solution> Clone() const override {
+    return std::make_unique<DecompSolution>(*this);
+  }
   virtual ~DecompSolution() override = default;
 };
 
@@ -20,7 +23,7 @@ template <class Numeric>
 struct DecompSolver : public Solver {
  public:
   DecompSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
-               const std::function<void(std::exception &&)> &terminator)
+               const std::function<void(MachineError &&)> &terminator)
       : Solver(progress, finisher, terminator) {
   }
 
@@ -29,11 +32,7 @@ struct DecompSolver : public Solver {
     if (decomp_solvable == nullptr) {
       throw InvalidSolutionType();
     }
-    try {
-      Finish(DecompSolution<Numeric>(decomp_solvable->matrix));
-    } catch (std::exception &e) {
-      Terminate(std::move(e));
-    }
+    Finish(DecompSolution<Numeric>(decomp_solvable->matrix));
   }
 
   virtual ~DecompSolver() override = default;
@@ -43,7 +42,7 @@ struct DecompSolver : public Solver {
 };
 
 std::unique_ptr<Solver> MakeDecompSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
-                                         const std::function<void(std::exception &&)> &terminator,
+                                         const std::function<void(MachineError &&)> &terminator,
                                          const Solvable &solvable) {
   if (dynamic_cast<const DecompSolvable<double> *>(&solvable) != nullptr) {
     return std::make_unique<DecompSolver<double>>(progress, finisher, terminator);

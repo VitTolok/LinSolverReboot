@@ -1,3 +1,4 @@
+#pragma once
 #include "Solver.hpp"
 #include <thread>
 
@@ -13,6 +14,9 @@ struct TestSolution : public Solution {
   std::string result;
   explicit TestSolution(const std::string &string) : result(string) {
   }
+  virtual std::unique_ptr<Solution> Clone() const override {
+    return std::make_unique<TestSolution>(*this);
+  }
   ~TestSolution() override {
   }
 };
@@ -20,11 +24,11 @@ struct TestSolution : public Solution {
 class TestSolver : public Solver {
  public:
   TestSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
-             const std::function<void(std::exception &&)> &terminator)
+             const std::function<void(MachineError &&)> &terminator)
       : Solver(progress, finisher, terminator) {
   }
 
-  virtual void operator()(const Solvable &solvable) const override try {
+  virtual void operator()(const Solvable &solvable) const override {
     auto input = dynamic_cast<const TestSolvable *>(&solvable);
     if (input == nullptr) {
       Terminate(InvalidSolutionType{});
@@ -44,8 +48,6 @@ class TestSolver : public Solver {
       default:
         Terminate(MachineError{});
     }
-  } catch (std::exception &exception) {
-    Terminate(std::move(exception));
   }
 
   ~TestSolver() override {

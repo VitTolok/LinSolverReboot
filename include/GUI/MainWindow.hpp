@@ -4,6 +4,7 @@
 #include "TestInterface.hpp"
 #include <memory>
 #include <qt6/QtWidgets/QMainWindow>
+#include <QMutex>
 #include <map>
 
 namespace Ui {
@@ -25,6 +26,13 @@ class MainWindow : public QMainWindow {
   Ui::MainWindow *ui_;
   std::map<const Process *, std::unique_ptr<Process>> procs_;
   TestInterface test_interface_;
+  Process *active_process_;
+  Interface *active_interface_;
+  QVBoxLayout *stack_;
+  QMutex mutex_;
 
   void Deleter(Process *);
+  void ActivateProcess(Process *);
+  void DeactivateProcess(Process *);
+  void AddProcess(Interface &);
 };

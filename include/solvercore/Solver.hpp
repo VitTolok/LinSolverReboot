@@ -25,6 +25,7 @@ struct Progress {
 };
 
 struct Solution {
+  virtual std::unique_ptr<Solution> Clone() const = 0;
   virtual ~Solution() {
   }
 };
@@ -32,14 +33,14 @@ struct Solution {
 class Solver {
  public:
   Solver(Progress &progress, const std::function<void(Solution &&)> &finisher,
-         const std::function<void(std::exception &&)> &terminator)
+         const std::function<void(MachineError &&)> &terminator)
       : progress_(progress), finisher_(finisher), terminator_(terminator) {
   }
   virtual void operator()(const Solvable &) const = 0;
   virtual ~Solver() {
   }
 
-  void Terminate(std::exception &&exception) const {
+  void Terminate(MachineError &&exception) const {
     terminator_(std::move(exception));
   }
 
@@ -52,5 +53,5 @@ class Solver {
 
  private:
   std::function<void(Solution &&)> finisher_;
-  std::function<void(std::exception &&)> terminator_;
+  std::function<void(MachineError &&)> terminator_;
 };

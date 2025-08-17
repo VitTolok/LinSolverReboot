@@ -6,11 +6,13 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_AUTOUIC_SEARCH_PATHS 
   ${CMAKE_SOURCE_DIR}/include/GUI/ui
+  ${CMAKE_SOURCE_DIR}/include/GUI/ui/interfaces
   ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 qt6_wrap_ui(MainWindow_UI_FILES
   ${CMAKE_SOURCE_DIR}/include/GUI/ui/MainWindow.ui
+  ${CMAKE_SOURCE_DIR}/include/GUI/ui/interfaces/TestInterface.ui
 )
 qt6_wrap_ui(Process_UI_FILES
   ${CMAKE_SOURCE_DIR}/include/GUI/ui/Process.ui
