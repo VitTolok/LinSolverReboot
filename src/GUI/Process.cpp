@@ -111,7 +111,7 @@ Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&ptr, Interface 
   progress_->moveToThread(thread_);
   connect(thread_, &QThread::started, progress_, &ProgressReport::Execute);
   connect(progress_, &ProgressReport::ReportProgress, &interface_, &Interface::SetProgress);
-  connect(progress_, &ProgressReport::EndThread, thread_, &QThread::quit);
+  connect(progress_, &ProgressReport::EndThread, [this]() -> void { thread_->quit(); });
   thread_->start();
 }
 
