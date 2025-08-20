@@ -12,16 +12,17 @@ class WrongInterface : public MachineError {};
 class Interface : public QWidget {
   Q_OBJECT
 
+ public slots:
+  virtual void SetProgress(int16_t) = 0;
+
  public:
-  explicit Interface(QMutex &mutex, QWidget *parent = nullptr) : QWidget(parent), mutex(mutex) {
+  explicit Interface(QMutex &mutex, QWidget *parent = nullptr) : QWidget(parent) {
   }
   virtual void ActivateInProgress(const Solvable &) = 0;
   virtual void ActivateSuccess(const Solvable &, const Solution &) = 0;
   virtual void ActivateError(const Solvable &, const MachineError &) = 0;
   virtual std::unique_ptr<Process> MakeProcess(QWidget *parent) = 0;
   virtual QPushButton *ExecuteButton() = 0;
-  virtual QProgressBar *ProgressBar() = 0;
   virtual ~Interface() {
   }
-  QMutex &mutex;
 };

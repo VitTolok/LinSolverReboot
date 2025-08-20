@@ -14,8 +14,7 @@ void ProgressReport::operator=(int16_t progress) {
     throw TerminationBreak{};
   }
   if (active_) {
-    QMutexLocker int_lock(&interface_.mutex);
-    interface_.ProgressBar()->setValue(progress);
+    emit ReportProgress(progress);
   }
   progress_ = progress;
 }
@@ -32,7 +31,7 @@ void ProgressReport::Terminate() {
 void ProgressReport::ReportToInterface() {
   std::lock_guard lock(mutex_);
   active_ = true;
-  interface_.ProgressBar()->setValue(progress_);
+  emit ReportProgress(progress_);
 }
 
 void ProgressReport::ReleaseInterface() {
@@ -44,24 +43,32 @@ bool ProgressReport::Active() const {
   return active_;
 }
 
-void Execute(Solver *solver, const Solvable *solvable) {
-  try {
-    (*solver)(*solvable);
-  } catch (MachineError &exception) {
-    solver->Terminate(std::move(exception));
-  } catch (...) {
-    solver->Terminate(MachineError{});
+void ProgressReport::SetSolver(Solver *solver, const Solvable *solvable) {
+  solver_ = solver;
+  solvable_ = solvable;
+}
+
+void ProgressReport::Execute() {
+  if (active_) {
+    emit ReportProgress(0);
   }
+  try {
+    (*solver_)(*solvable_);
+  } catch (MachineError &exception) {
+    solver_->Terminate(std::move(exception));
+  } catch (...) {
+    solver_->Terminate(MachineError{});
+  }
+  emit EndThread();
 }
 
 void Finisher(Process &process, Solution &&solution) {
-  process.progress_ = 100;
+  *process.progress_ = 100;
   std::lock_guard lock(process.mutex_);
-  QMutexLocker int_lock(&process.interface_.mutex);
   process.solution_ = solution.Clone();
   process.end_ = std::chrono::steady_clock::now();
   process.ui_->status->setText("Finished.");
-  if (process.progress_.Active()) {
+  if (process.progress_->Active()) {
     process.ReportToInterface();
   }
 }
@@ -69,20 +76,20 @@ void Terminator(Process &process, MachineError &&exception) {
   if (dynamic_cast<const TerminationBreak *>(&exception)) {
     return;
   }
-  process.progress_.Report();
+  process.progress_->Report();
   std::lock_guard lock(process.mutex_);
-  QMutexLocker int_lock(&process.interface_.mutex);
   process.ui_->status->setText("Error.");
   process.error_ = exception.Clone();
   process.end_ = std::chrono::steady_clock::now();
-  if (process.progress_.Active()) {
+  if (process.progress_->Active()) {
     process.ReportToInterface();
   }
 }
 
 Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&ptr, Interface &interface, QWidget *parent)
     : QWidget(parent)
-    , progress_(interface)
+    , progress_(new ProgressReport(interface))
+    , thread_(new QThread(&interface))
     , interface_(interface)
     , solvable_(std::move(ptr))
     , type_(proc_type)
@@ -91,17 +98,21 @@ Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&ptr, Interface 
     , solution_(nullptr)
     , mutex_() {
   std::lock_guard lock(mutex_);
-  QMutexLocker int_lock(&interface.mutex);
   switch (proc_type) {
     case ProcType::kTestProc:
       solver_ = std::make_unique<TestSolver>(
-          progress_, [this](Solution &&s) -> void { Finisher(*this, std::move(s)); },
+          *progress_, [this](Solution &&s) -> void { Finisher(*this, std::move(s)); },
           [this](MachineError &&e) -> void { Terminator(*this, std::move(e)); });
   }
   ui_ = new Ui::Process;
   ui_->setupUi(this);
   ui_->status->setText("Running...");
-  thread_ = std::thread(Execute, solver_.get(), solvable_.get());
+  progress_->SetSolver(solver_.get(), solvable_.get());
+  progress_->moveToThread(thread_);
+  connect(thread_, &QThread::started, progress_, &ProgressReport::Execute);
+  connect(progress_, &ProgressReport::ReportProgress, &interface_, &Interface::SetProgress);
+  connect(progress_, &ProgressReport::EndThread, thread_, &QThread::quit);
+  thread_->start();
 }
 
 const Ui::Process *Process::Ui() const {
@@ -114,17 +125,15 @@ Process::ProcType Process::GetProcType() const {
 
 Process::~Process() {
   std::lock_guard lock(mutex_);
-  progress_.Terminate();
-  if (thread_.joinable()) {
-    thread_.join();
-  }
+  progress_->Terminate();
+  thread_->wait();
   if (ui_) {
     delete ui_;
   }
 }
 
 void Process::ReleaseInterface() {
-  progress_.ReleaseInterface();
+  progress_->ReleaseInterface();
 }
 
 void Process::ReportToInterface() {
@@ -135,5 +144,5 @@ void Process::ReportToInterface() {
   } else {
     interface_.ActivateInProgress(*solvable_);
   }
-  progress_.ReportToInterface();
+  progress_->ReportToInterface();
 }

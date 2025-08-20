@@ -41,7 +41,6 @@ void MainWindow::AddProcess(Interface &interface) {
     }
     interface.ExecuteButton()->setEnabled(false);
     auto process = interface.MakeProcess(this);
-    QMutexLocker lock(&interface.mutex);
     ptr = process.get();
     procs_[ptr] = std::move(process);
     connect(ptr->Ui()->terminate_button, &QPushButton::clicked, [this, ptr]() -> void { Deleter(ptr); });

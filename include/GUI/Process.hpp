@@ -3,7 +3,7 @@
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QProgressBar>
 #include <mutex>
-#include <thread>
+#include <QThread>
 namespace Ui {
 class Process;
 }
@@ -12,10 +12,11 @@ class Interface;
 
 class TerminationBreak : public MachineError {};
 
-struct ProgressReport : public Progress {
+struct ProgressReport : public QObject, public Progress {
+  Q_OBJECT
  public:
   ProgressReport(Interface &);
-  void operator=(int16_t prog) override;
+  void operator=(int16_t) override;
   void Report();
   bool Active() const;
   void ReportToInterface();
@@ -23,12 +24,22 @@ struct ProgressReport : public Progress {
   void Terminate();
   ~ProgressReport() override {
   }
+  void SetSolver(Solver *, const Solvable *);
+
+ public slots:
+  void Execute();
+
+ signals:
+  void ReportProgress(int16_t);
+  void EndThread();
 
  private:
   int16_t progress_;
   bool terminate_signal_;
   bool active_;
   Interface &interface_;
+  Solver *solver_;
+  const Solvable *solvable_;
   std::mutex mutex_;
 };
 
@@ -49,11 +60,11 @@ class Process : public QWidget {
   Interface &interface_;
   Ui::Process *ui_;
   ProcType type_;
-  std::thread thread_;
+  QThread *thread_;
   std::unique_ptr<Solver> solver_;
   std::chrono::steady_clock::time_point start_;
   std::chrono::steady_clock::time_point end_;
-  ProgressReport progress_;
+  ProgressReport *progress_;
   std::unique_ptr<MachineError> error_;
   std::unique_ptr<Solution> solution_;
   std::mutex mutex_;
