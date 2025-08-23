@@ -16,13 +16,14 @@ class Interface : public QWidget {
   virtual void SetProgress(int16_t) = 0;
 
  public:
-  explicit Interface(QMutex &mutex, QWidget *parent = nullptr) : QWidget(parent) {
+  explicit Interface(QWidget *parent = nullptr) : QWidget(parent) {
   }
   virtual void ActivateInProgress(const Solvable &) = 0;
   virtual void ActivateSuccess(const Solvable &, const Solution &) = 0;
   virtual void ActivateError(const Solvable &, const MachineError &) = 0;
   virtual std::unique_ptr<Process> MakeProcess(QWidget *parent) = 0;
   virtual QPushButton *ExecuteButton() = 0;
+  virtual QString Name() const = 0;
   virtual ~Interface() {
   }
 };

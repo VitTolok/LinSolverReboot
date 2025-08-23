@@ -29,10 +29,10 @@ class MainWindow : public QMainWindow {
   Process *active_process_;
   Interface *active_interface_;
   QVBoxLayout *stack_;
-  QMutex mutex_;
 
   void Deleter(Process *);
   void ActivateProcess(Process *);
-  void DeactivateProcess(Process *);
   void AddProcess(Interface &);
+  void SummonInterface(Interface *);
+  void RegisterInterface(Interface *);
 };

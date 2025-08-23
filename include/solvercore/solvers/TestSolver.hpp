@@ -14,8 +14,8 @@ struct TestSolution : public Solution {
   std::string result;
   explicit TestSolution(const std::string &string) : result(string) {
   }
-  virtual std::unique_ptr<Solution> Clone() const override {
-    return std::make_unique<TestSolution>(*this);
+  virtual std::unique_ptr<Solution> Detatch() override {
+    return std::make_unique<TestSolution>(std::move(*this));
   }
   ~TestSolution() override {
   }

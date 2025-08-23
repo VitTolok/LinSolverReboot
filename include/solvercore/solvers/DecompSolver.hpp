@@ -13,8 +13,8 @@ struct DecompSolution : public Solution {
   DecompSolution(const Matrix<Numeric> &matrix) : decomp(matrix) {
   }
   Decompose<Numeric> decomp;
-  virtual std::unique_ptr<Solution> Clone() const override {
-    return std::make_unique<DecompSolution>(*this);
+  virtual std::unique_ptr<Solution> Detatch() override {
+    return std::make_unique<DecompSolution>(std::move(*this));
   }
   virtual ~DecompSolution() override = default;
 };

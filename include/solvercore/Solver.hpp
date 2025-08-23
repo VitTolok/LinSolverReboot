@@ -25,7 +25,7 @@ struct Progress {
 };
 
 struct Solution {
-  virtual std::unique_ptr<Solution> Clone() const = 0;
+  virtual std::unique_ptr<Solution> Detatch() = 0;
   virtual ~Solution() {
   }
 };

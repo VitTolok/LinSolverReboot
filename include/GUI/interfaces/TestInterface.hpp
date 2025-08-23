@@ -6,8 +6,7 @@
 class TestInterface : public Interface {
   Q_OBJECT
  public:
-  explicit TestInterface(QMutex &mutex, QWidget *parent = nullptr)
-      : Interface(mutex, parent), ui_(new Ui::TestInterface()) {
+  explicit TestInterface(QWidget *parent = nullptr) : Interface(parent), ui_(new Ui::TestInterface()) {
     ui_->setupUi(this);
   }
   virtual void ActivateInProgress(const Solvable &solvable) override {
@@ -47,6 +46,10 @@ class TestInterface : public Interface {
   }
   virtual void SetProgress(int16_t progress) override {
     ui_->progressBar->setValue(progress);
+  }
+
+  virtual QString Name() const override {
+    return "Test";
   }
 
  private:

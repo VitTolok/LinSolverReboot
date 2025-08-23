@@ -65,7 +65,7 @@ void ProgressReport::Execute() {
 void Finisher(Process &process, Solution &&solution) {
   *process.progress_ = 100;
   std::lock_guard lock(process.mutex_);
-  process.solution_ = solution.Clone();
+  process.solution_ = solution.Detatch();
   process.end_ = std::chrono::steady_clock::now();
   process.ui_->status->setText("Finished.");
   if (process.progress_->Active()) {

@@ -4,7 +4,6 @@
 #include "TestSolver.hpp"
 
 void MainWindow::Deleter(Process *ptr) {
-  QMutexLocker lock(&mutex_);
   ptr->Ui()->terminate_button->setEnabled(false);
   procs_.erase(ptr);
 }
@@ -18,7 +17,6 @@ void MainWindow::ActivateProcess(Process *process) {
     active_process_->ReleaseInterface();
   }
   active_process_ = process;
-  QMutexLocker lock(&mutex_);
   switch (process->GetProcType()) {
     case Process::ProcType::kTestProc:
       if (active_interface_ != &test_interface_) {
@@ -34,39 +32,60 @@ void MainWindow::ActivateProcess(Process *process) {
 
 void MainWindow::AddProcess(Interface &interface) {
   Process *ptr = nullptr;
-  {
-    if (procs_.find(active_process_) != procs_.end()) {
-      active_process_->ReleaseInterface();
-      active_process_ = nullptr;
-    }
-    interface.ExecuteButton()->setEnabled(false);
-    auto process = interface.MakeProcess(this);
-    ptr = process.get();
-    procs_[ptr] = std::move(process);
-    connect(ptr->Ui()->terminate_button, &QPushButton::clicked, [this, ptr]() -> void { Deleter(ptr); });
-    connect(ptr->Ui()->show_button, &QPushButton::clicked, [this, ptr]() -> void { ActivateProcess(ptr); });
-    stack_->insertWidget(0, ptr);
-    ptr->show();
+  if (procs_.find(active_process_) != procs_.end()) {
+    active_process_->ReleaseInterface();
+    active_process_ = nullptr;
   }
+  interface.ExecuteButton()->setEnabled(false);
+  auto process = interface.MakeProcess(this);
+  ptr = process.get();
+  procs_[ptr] = std::move(process);
+  connect(ptr->Ui()->terminate_button, &QPushButton::clicked, [this, ptr]() -> void { Deleter(ptr); });
+  connect(ptr->Ui()->show_button, &QPushButton::clicked, [this, ptr]() -> void { ActivateProcess(ptr); });
+  stack_->insertWidget(0, ptr);
+  ptr->show();
   ActivateProcess(ptr);
   interface.ExecuteButton()->setEnabled(true);
+}
+
+void MainWindow::RegisterInterface(Interface *interface) {
+  auto action = new QAction(ui_->menuinterface);
+  action->setText(interface->Name());
+  ui_->menuinterface->addAction(action);
+  connect(action, &QAction::triggered, [this, interface]() -> void { SummonInterface(interface); });
+  connect(interface->ExecuteButton(), &QPushButton::clicked, [this, interface]() -> void { AddProcess(*interface); });
+}
+
+void MainWindow::SummonInterface(Interface *interface) {
+  if (active_interface_ == interface) {
+    return;
+  }
+  if (active_interface_ != nullptr) {
+    if (procs_.find(active_process_) != procs_.end()) {
+      active_process_->ReleaseInterface();
+    }
+    ui_->horizontalLayout->replaceWidget(active_interface_, interface);
+  } else {
+    ui_->horizontalLayout->insertWidget(0, interface);
+  }
+  active_interface_ = interface;
 }
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui_(new Ui::MainWindow)
-    , test_interface_(mutex_, this)
+    , test_interface_(this)
     , active_process_(nullptr)
-    , active_interface_(&test_interface_) {
+    , active_interface_(nullptr) {
   ui_->setupUi(this);
-  ui_->horizontalLayout->insertWidget(0, &test_interface_);
   auto scroll_content = new QWidget;
   stack_ = new QVBoxLayout(scroll_content);
   ui_->scrollArea->setWidget(scroll_content);
-  connect(test_interface_.ExecuteButton(), &QPushButton::clicked, [this]() -> void { AddProcess(test_interface_); });
-  // following two lines are to be removed when interface summoning is added
-  ui_->horizontalLayout->insertWidget(0, &test_interface_);
-  active_interface_ = &test_interface_;
+  Interface *interfaces[]{&test_interface_};
+  for (auto interface : interfaces) {
+    RegisterInterface(interface);
+  }
+  SummonInterface(&test_interface_);
 }
 
 MainWindow::~MainWindow() {
