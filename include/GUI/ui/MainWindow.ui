@@ -53,7 +53,7 @@
          <x>0</x>
          <y>0</y>
          <width>298</width>
-         <height>511</height>
+         <height>533</height>
         </rect>
        </property>
       </widget>
@@ -77,12 +77,6 @@
    </widget>
    <addaction name="menuinterface"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionnew_calculation">
-   <property name="text">
-    <string>new calculation</string>
-   </property>
-  </action>
  </widget>
  <resources/>
  <connections/>

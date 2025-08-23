@@ -1,3 +1,5 @@
+add_subdirectory(interfaces)
+
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/GUI)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/GUI)
 set(CMAKE_AUTOUIC ON)
@@ -59,4 +61,5 @@ target_link_libraries(MainWindow PUBLIC
   Qt6::Widgets
   Qt6::UiTools
   Process
+  DecompInterface
 )

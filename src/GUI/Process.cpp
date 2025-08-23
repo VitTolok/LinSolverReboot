@@ -103,6 +103,12 @@ Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&ptr, Interface 
       solver_ = std::make_unique<TestSolver>(
           *progress_, [this](Solution &&s) -> void { Finisher(*this, std::move(s)); },
           [this](MachineError &&e) -> void { Terminator(*this, std::move(e)); });
+      break;
+    case ProcType::kDecompProc:
+      solver_ = MakeDecompSolver(
+          *progress_, [this](Solution &&solution) -> void { Finisher(*this, std::move(solution)); },
+          [this](MachineError &&error) -> void { Terminator(*this, std::move(error)); }, *solvable_);
+      break;
   }
   ui_ = new Ui::Process;
   ui_->setupUi(this);

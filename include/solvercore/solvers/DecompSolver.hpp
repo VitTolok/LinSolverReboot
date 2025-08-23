@@ -1,16 +1,28 @@
 #pragma once
 #include "Solver.hpp"
 #include "decomp.hpp"
+#include <sstream>
+
+struct DecompSolvableBase : public Solvable {
+  enum class NumericType { kDouble } numeric_type;
+  virtual std::string Print() const = 0;
+};
 
 template <class Numeric>
-struct DecompSolvable : public Solvable {
+struct DecompSolvable : public DecompSolvableBase {
   Matrix<Numeric> matrix;
+  DecompSolvable(std::string &&string) {
+    std::istringstream(std::move(string)) >> matrix;
+  }
+  virtual std::string Print() const override {
+    return (std::ostringstream() << matrix).str();
+  }
   virtual ~DecompSolvable() override = default;
 };
 
 template <class Numeric>
 struct DecompSolution : public Solution {
-  DecompSolution(const Matrix<Numeric> &matrix) : decomp(matrix) {
+  DecompSolution(const Matrix<Numeric> &matrix, Progress *progress) : decomp(matrix, progress) {
   }
   Decompose<Numeric> decomp;
   virtual std::unique_ptr<Solution> Detatch() override {
@@ -30,9 +42,9 @@ struct DecompSolver : public Solver {
   virtual void operator()(const Solvable &solvable) const override {
     auto decomp_solvable = dynamic_cast<const DecompSolvable<Numeric> *>(&solvable);
     if (decomp_solvable == nullptr) {
-      throw InvalidSolutionType();
+      throw InvalidSolutionType{};
     }
-    Finish(DecompSolution<Numeric>(decomp_solvable->matrix));
+    Finish(DecompSolution<Numeric>(decomp_solvable->matrix, &progress_));
   }
 
   virtual ~DecompSolver() override = default;
@@ -41,11 +53,17 @@ struct DecompSolver : public Solver {
   std::unique_ptr<DecompSolution<Numeric>> solution_;
 };
 
-std::unique_ptr<Solver> MakeDecompSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
-                                         const std::function<void(MachineError &&)> &terminator,
-                                         const Solvable &solvable) {
-  if (dynamic_cast<const DecompSolvable<double> *>(&solvable) != nullptr) {
-    return std::make_unique<DecompSolver<double>>(progress, finisher, terminator);
+inline std::unique_ptr<Solver> MakeDecompSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
+                                                const std::function<void(MachineError &&)> &terminator,
+                                                const Solvable &solvable) {
+  auto ptr = dynamic_cast<const DecompSolvableBase *>(&solvable);
+  if (ptr == nullptr) {
+    throw InvalidSolutionType{};
   }
-  throw InvalidSolutionType();
+  switch (ptr->numeric_type) {
+    case DecompSolvableBase::NumericType::kDouble:
+      return std::make_unique<DecompSolver<long double>>(progress, finisher, terminator);
+    default:
+      throw InvalidSolutionType{};
+  }
 }

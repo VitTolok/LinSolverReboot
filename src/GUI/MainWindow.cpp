@@ -1,5 +1,5 @@
-#include "MainWindow.hpp"
 #include "ui_MainWindow.h"
+#include "MainWindow.hpp"
 #include "ui_Process.h"
 #include "TestSolver.hpp"
 
@@ -19,11 +19,10 @@ void MainWindow::ActivateProcess(Process *process) {
   active_process_ = process;
   switch (process->GetProcType()) {
     case Process::ProcType::kTestProc:
-      if (active_interface_ != &test_interface_) {
-        ui_->horizontalLayout->removeWidget(active_interface_);
-        ui_->horizontalLayout->insertWidget(0, &test_interface_);
-        active_interface_ = &test_interface_;
-      }
+      SummonInterface(&test_interface_);
+      break;
+    case Process::ProcType::kDecompProc:
+      SummonInterface(&decomp_interface_);
       break;
   }
   process->ReportToInterface();
@@ -51,6 +50,7 @@ void MainWindow::AddProcess(Interface &interface) {
 void MainWindow::RegisterInterface(Interface *interface) {
   auto action = new QAction(ui_->menuinterface);
   action->setText(interface->Name());
+  interface->hide();
   ui_->menuinterface->addAction(action);
   connect(action, &QAction::triggered, [this, interface]() -> void { SummonInterface(interface); });
   connect(interface->ExecuteButton(), &QPushButton::clicked, [this, interface]() -> void { AddProcess(*interface); });
@@ -64,10 +64,12 @@ void MainWindow::SummonInterface(Interface *interface) {
     if (procs_.find(active_process_) != procs_.end()) {
       active_process_->ReleaseInterface();
     }
+    active_interface_->hide();
     ui_->horizontalLayout->replaceWidget(active_interface_, interface);
   } else {
     ui_->horizontalLayout->insertWidget(0, interface);
   }
+  interface->show();
   active_interface_ = interface;
 }
 
@@ -75,13 +77,14 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui_(new Ui::MainWindow)
     , test_interface_(this)
+    , decomp_interface_(this)
     , active_process_(nullptr)
     , active_interface_(nullptr) {
   ui_->setupUi(this);
   auto scroll_content = new QWidget;
   stack_ = new QVBoxLayout(scroll_content);
   ui_->scrollArea->setWidget(scroll_content);
-  Interface *interfaces[]{&test_interface_};
+  Interface *interfaces[]{&test_interface_, &decomp_interface_};
   for (auto interface : interfaces) {
     RegisterInterface(interface);
   }
