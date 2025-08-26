@@ -46,6 +46,9 @@ struct ProgressReport : public QObject, public Progress {
 class Process : public QWidget {
   Q_OBJECT
 
+ public slots:
+  void SoftReportToInterface();
+
  public:
   enum class ProcType { kDecompProc, kTestProc };
   Process(ProcType, std::unique_ptr<Solvable> &&, Interface &, QWidget *parent = nullptr);
@@ -64,7 +67,7 @@ class Process : public QWidget {
   std::unique_ptr<Solver> solver_;
   std::chrono::steady_clock::time_point start_;
   std::chrono::steady_clock::time_point end_;
-  ProgressReport *progress_;
+  std::unique_ptr<ProgressReport> progress_;
   std::unique_ptr<MachineError> error_;
   std::unique_ptr<Solution> solution_;
   std::mutex mutex_;

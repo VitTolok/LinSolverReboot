@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>643</width>
-    <height>308</height>
+    <height>316</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -46,7 +46,11 @@
           </widget>
          </item>
          <item>
-          <widget class="QPlainTextEdit" name="source_matrix_text_edit"/>
+          <widget class="QPlainTextEdit" name="source_matrix_text_edit">
+           <property name="styleSheet">
+            <string notr="true">font: 9pt &quot;Monospace&quot;;</string>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QLabel" name="label_7">
@@ -76,46 +80,68 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <layout class="QGridLayout" name="gridLayout">
-         <item row="2" column="1">
-          <widget class="QLabel" name="label_6">
-           <property name="text">
-            <string>Upper(LU):</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="label_5">
-           <property name="text">
-            <string>Lower(LU):</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QTextBrowser" name="det_text_browser"/>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLabel" name="label_4">
-           <property name="text">
-            <string>Solved:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
+        <layout class="QVBoxLayout" name="verticalLayout_4">
+         <item>
           <widget class="QLabel" name="label_3">
            <property name="text">
             <string>Determinant:</string>
            </property>
           </widget>
          </item>
-         <item row="1" column="1">
-          <widget class="QTextBrowser" name="solved_text_browser"/>
+         <item>
+          <widget class="QTextBrowser" name="det_text_browser">
+           <property name="styleSheet">
+            <string notr="true">font: 9pt &quot;Monospace&quot;;</string>
+           </property>
+          </widget>
          </item>
-         <item row="3" column="0">
-          <widget class="QTextBrowser" name="lower_text_browser"/>
+         <item>
+          <widget class="QLabel" name="label_5">
+           <property name="text">
+            <string>Lower(LU):</string>
+           </property>
+          </widget>
          </item>
-         <item row="3" column="1">
-          <widget class="QTextBrowser" name="upper_text_browser"/>
+         <item>
+          <widget class="QTextBrowser" name="lower_text_browser">
+           <property name="styleSheet">
+            <string notr="true">font: 9pt &quot;Monospace&quot;;</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="widget_4" native="true">
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="QLabel" name="label_4">
+           <property name="text">
+            <string>Solved:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextBrowser" name="solved_text_browser">
+           <property name="styleSheet">
+            <string notr="true">font: 9pt &quot;Monospace&quot;;</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_6">
+           <property name="text">
+            <string>Upper(LU):</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextBrowser" name="upper_text_browser">
+           <property name="styleSheet">
+            <string notr="true">font: 9pt &quot;Monospace&quot;;</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>

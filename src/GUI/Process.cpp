@@ -68,9 +68,6 @@ void Finisher(Process &process, Solution &&solution) {
   process.solution_ = solution.Detatch();
   process.end_ = std::chrono::steady_clock::now();
   process.ui_->status->setText("Finished.");
-  if (process.progress_->Active()) {
-    process.ReportToInterface();
-  }
 }
 void Terminator(Process &process, MachineError &&exception) {
   if (dynamic_cast<const TerminationBreak *>(&exception)) {
@@ -81,15 +78,12 @@ void Terminator(Process &process, MachineError &&exception) {
   process.ui_->status->setText("Error.");
   process.error_ = exception.Clone();
   process.end_ = std::chrono::steady_clock::now();
-  if (process.progress_->Active()) {
-    process.ReportToInterface();
-  }
 }
 
 Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&ptr, Interface &interface, QWidget *parent)
     : QWidget(parent)
-    , progress_(new ProgressReport(interface))
-    , thread_(new QThread(&interface))
+    , progress_(std::make_unique<ProgressReport>(interface))
+    , thread_(new QThread(this))
     , interface_(interface)
     , solvable_(std::move(ptr))
     , type_(proc_type)
@@ -115,9 +109,10 @@ Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&ptr, Interface 
   ui_->status->setText("Running...");
   progress_->SetSolver(solver_.get(), solvable_.get());
   progress_->moveToThread(thread_);
-  connect(thread_, &QThread::started, progress_, &ProgressReport::Execute);
-  connect(progress_, &ProgressReport::ReportProgress, &interface_, &Interface::SetProgress);
-  connect(progress_, &ProgressReport::EndThread, [this]() -> void { thread_->quit(); });
+  connect(thread_, &QThread::started, progress_.get(), &ProgressReport::Execute);
+  connect(progress_.get(), &ProgressReport::ReportProgress, &interface_, &Interface::SetProgress);
+  connect(progress_.get(), &ProgressReport::EndThread, this, [this]() -> void { thread_->quit(); });
+  connect(progress_.get(), &ProgressReport::EndThread, this, &Process::SoftReportToInterface);
   thread_->start();
 }
 
@@ -132,10 +127,7 @@ Process::ProcType Process::GetProcType() const {
 Process::~Process() {
   std::lock_guard lock(mutex_);
   progress_->Terminate();
-  thread_->wait();
-  if (ui_) {
-    delete ui_;
-  }
+  delete ui_;
 }
 
 void Process::ReleaseInterface() {
@@ -143,6 +135,7 @@ void Process::ReleaseInterface() {
 }
 
 void Process::ReportToInterface() {
+  progress_->ReportToInterface();
   if (solution_) {
     interface_.ActivateSuccess(*solvable_, *solution_);
   } else if (error_) {
@@ -150,5 +143,10 @@ void Process::ReportToInterface() {
   } else {
     interface_.ActivateInProgress(*solvable_);
   }
-  progress_->ReportToInterface();
+}
+
+void Process::SoftReportToInterface() {
+  if (progress_->Active()) {
+    ReportToInterface();
+  }
 }

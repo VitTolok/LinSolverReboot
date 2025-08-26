@@ -1,6 +1,5 @@
 #pragma once
 #include "Interface.hpp"
-#include "DecompSolver.hpp"
 
 namespace Ui {
 class DecompInterface;
