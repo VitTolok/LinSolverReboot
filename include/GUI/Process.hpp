@@ -53,16 +53,15 @@ class Process : public QWidget {
   enum class ProcType { kDecompProc, kTestProc };
   Process(ProcType, std::unique_ptr<Solvable> &&, Interface &, QWidget *parent = nullptr);
   ~Process() override;
+  Interface *GetInterface();
   void ReleaseInterface();
   void ReportToInterface();
-  ProcType GetProcType() const;
   const Ui::Process *Ui() const;
 
  private:
   std::unique_ptr<Solvable> solvable_;
   Interface &interface_;
   Ui::Process *ui_;
-  ProcType type_;
   QThread *thread_;
   std::unique_ptr<Solver> solver_;
   std::chrono::steady_clock::time_point start_;

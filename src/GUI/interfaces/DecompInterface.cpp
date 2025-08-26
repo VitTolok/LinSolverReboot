@@ -3,7 +3,7 @@
 #include "DecompSolver.hpp"
 #include "sstream"
 
-enum class TypeIdentifyer { kDouble };
+using TypeIdentifyer = DecompSolvableBase::NumericType;
 
 void DecompInterface::SetProgress(int16_t progress) {
   ui_->progressBar->setValue(progress);
@@ -12,6 +12,7 @@ void DecompInterface::SetProgress(int16_t progress) {
 DecompInterface::DecompInterface(QWidget *parent) : Interface(parent), ui_(new Ui::DecompInterface{}) {
   ui_->setupUi(this);
   ui_->type_choice_combo_box->addItem("double", static_cast<int32_t>(TypeIdentifyer::kDouble));
+  ui_->type_choice_combo_box->addItem("rational", static_cast<int32_t>(TypeIdentifyer::kRational));
 }
 
 void DecompInterface::ActivateInProgress(const Solvable &solvable) {
@@ -20,9 +21,13 @@ void DecompInterface::ActivateInProgress(const Solvable &solvable) {
     throw WrongInterface{};
   }
   switch (ptr->numeric_type) {
-    case DecompSolvableBase::NumericType::kDouble:
+    case TypeIdentifyer::kDouble:
       ui_->type_choice_combo_box->setCurrentIndex(
           ui_->type_choice_combo_box->findData(static_cast<int32_t>(TypeIdentifyer::kDouble)));
+      break;
+    case TypeIdentifyer::kRational:
+      ui_->type_choice_combo_box->setCurrentIndex(
+          ui_->type_choice_combo_box->findData(static_cast<int32_t>(TypeIdentifyer::kRational)));
       break;
     default:
       throw WrongInterface{};
@@ -48,9 +53,16 @@ void DecompInterface::ActivateSuccess(const Solvable &solvable, const Solution &
     throw WrongInterface{};
   }
   switch (ptr->numeric_type) {
-    case DecompSolvableBase::NumericType::kDouble:
-      ui_->type_choice_combo_box->setCurrentText("double");
+    case TypeIdentifyer::kDouble:
+
+      ui_->type_choice_combo_box->setCurrentIndex(
+          ui_->type_choice_combo_box->findData(static_cast<int32_t>(TypeIdentifyer::kDouble)));
       PrintSolution(ui_, dynamic_cast<const DecompSolution<long double> &>(solution));
+      break;
+    case TypeIdentifyer::kRational:
+      ui_->type_choice_combo_box->setCurrentIndex(
+          ui_->type_choice_combo_box->findData(static_cast<int32_t>(TypeIdentifyer::kRational)));
+      PrintSolution(ui_, dynamic_cast<const DecompSolution<Rational> &>(solution));
       break;
     default:
       throw WrongInterface{};
@@ -69,8 +81,20 @@ std::unique_ptr<Process> DecompInterface::MakeProcess(QWidget *parent) {
     case TypeIdentifyer::kDouble:
       return std::make_unique<Process>(
           Process::ProcType::kDecompProc,
-          std::make_unique<DecompSolvable<long double>>(ui_->source_matrix_text_edit->toPlainText().toStdString()),
+          std::make_unique<DecompSolvable<long double>>(ui_->source_matrix_text_edit->toPlainText().toStdString(),
+                                                        TypeIdentifyer::kDouble),
           *this, parent);
+    case TypeIdentifyer::kRational:
+      try {
+        return std::make_unique<Process>(
+            Process::ProcType::kDecompProc,
+            std::make_unique<DecompSolvable<Rational>>(ui_->source_matrix_text_edit->toPlainText().toStdString(),
+                                                       TypeIdentifyer::kRational),
+            *this, parent);
+      } catch (std::exception &error) {
+        ui_->status->setText(
+            QString::fromStdString(std::string("Error: ") + typeid(error).name() + ": " + error.what()));
+      }
     default:
       throw MachineError{};
   }

@@ -80,13 +80,13 @@ void Terminator(Process &process, MachineError &&exception) {
   process.end_ = std::chrono::steady_clock::now();
 }
 
-Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&ptr, Interface &interface, QWidget *parent)
+Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&solvable, Interface &interface, QWidget *parent)
     : QWidget(parent)
     , progress_(std::make_unique<ProgressReport>(interface))
     , thread_(new QThread(this))
     , interface_(interface)
-    , solvable_(std::move(ptr))
-    , type_(proc_type)
+    , solvable_(std::move(solvable))
+    , solver_(nullptr)
     , start_(std::chrono::steady_clock::now())
     , error_(nullptr)
     , solution_(nullptr)
@@ -120,8 +120,8 @@ const Ui::Process *Process::Ui() const {
   return ui_;
 }
 
-Process::ProcType Process::GetProcType() const {
-  return type_;
+Interface *Process::GetInterface() {
+  return &interface_;
 }
 
 Process::~Process() {

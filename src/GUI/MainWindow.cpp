@@ -17,14 +17,7 @@ void MainWindow::ActivateProcess(Process *process) {
     active_process_->ReleaseInterface();
   }
   active_process_ = process;
-  switch (process->GetProcType()) {
-    case Process::ProcType::kTestProc:
-      SummonInterface(&test_interface_);
-      break;
-    case Process::ProcType::kDecompProc:
-      SummonInterface(&decomp_interface_);
-      break;
-  }
+  SummonInterface(process->GetInterface());
   process->ReportToInterface();
   process->Ui()->show_button->setEnabled(true);
 }

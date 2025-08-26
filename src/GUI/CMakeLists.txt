@@ -43,6 +43,7 @@ target_include_directories(MainWindow PUBLIC
 target_include_directories(Process PUBLIC
   ${CMAKE_SOURCE_DIR}/include/GUI
   ${CMAKE_SOURCE_DIR}/include
+  ${CMAKE_SOURCE_DIR}/include/numeric
   ${CMAKE_SOURCE_DIR}/include/solvercore
   ${CMAKE_SOURCE_DIR}/include/solvercore/solvers
   ${CMAKE_CURRENT_BINARY_DIR} 

@@ -1,17 +1,20 @@
 #pragma once
 #include "Solver.hpp"
 #include "decomp.hpp"
+#include "rational.hpp"
 #include <sstream>
 
 struct DecompSolvableBase : public Solvable {
-  enum class NumericType { kDouble } numeric_type;
+  enum class NumericType { kDouble, kRational } numeric_type;
+  explicit DecompSolvableBase(NumericType type) : numeric_type(type) {
+  }
   virtual std::string Print() const = 0;
 };
 
 template <class Numeric>
 struct DecompSolvable : public DecompSolvableBase {
   Matrix<Numeric> matrix;
-  DecompSolvable(std::string &&string) {
+  DecompSolvable(std::string &&string, NumericType type) : DecompSolvableBase(type) {
     std::istringstream(std::move(string)) >> matrix;
   }
   virtual std::string Print() const override {
@@ -63,6 +66,8 @@ inline std::unique_ptr<Solver> MakeDecompSolver(Progress &progress, const std::f
   switch (ptr->numeric_type) {
     case DecompSolvableBase::NumericType::kDouble:
       return std::make_unique<DecompSolver<long double>>(progress, finisher, terminator);
+    case DecompSolvableBase::NumericType::kRational:
+      return std::make_unique<DecompSolver<Rational>>(progress, finisher, terminator);
     default:
       throw InvalidSolutionType{};
   }

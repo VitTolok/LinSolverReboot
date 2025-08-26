@@ -22,6 +22,7 @@ add_library(DecompInterface STATIC
 
 target_include_directories(DecompInterface PUBLIC
   ${CMAKE_SOURCE_DIR}/include
+  ${CMAKE_SOURCE_DIR}/include/numeric
   ${CMAKE_SOURCE_DIR}/include/GUI
   ${CMAKE_SOURCE_DIR}/include/GUI/interfaces
   ${CMAKE_SOURCE_DIR}/include/solvercore
@@ -35,4 +36,5 @@ target_link_libraries(DecompInterface PUBLIC
   Qt6::Gui
   Qt6::Widgets
   Qt6::UiTools
+  rational
 )
