@@ -100,6 +100,12 @@ class UBigInt {
 
   friend std::ostream &operator<<(std::ostream &, const UBigInt &);
   friend std::istream &operator>>(std::istream &, UBigInt &);
+
+  struct Approximation {
+    long double multiplier;
+    size_t power;
+  };
+  Approximation GetApproximation() const;
   std::string Exact() const;
 
   ~UBigInt() = default;
