@@ -1,7 +1,7 @@
 #include "UBigInt.hpp"
 
 class BigInt {
-public:
+ public:
   BigInt();
   explicit BigInt(int64_t);
   BigInt(const BigInt &) = default;
@@ -97,7 +97,7 @@ public:
 
   ~BigInt() = default;
 
-private:
+ private:
   UBigInt abs_;
   bool pos_;
 };
