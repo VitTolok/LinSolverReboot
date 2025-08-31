@@ -84,6 +84,9 @@ UBigInt &operator-=(UBigInt &first, const UBigInt &second) {
 }
 
 UBigInt &operator*=(UBigInt &first, const UBigInt &second) {
+  if (first == 0 || second == 0) {
+    return first = 0;
+  }
   if (&first == &second) {
     UBigInt copy = second;
     return first *= copy;
@@ -164,36 +167,6 @@ UBigInt &operator%=(UBigInt &first, const UBigInt &second) {
     InPlaceBigDiv(remainder, second);
   }
   return first = remainder;
-}
-
-UBigInt operator+(const UBigInt &first, const UBigInt &second) {
-  UBigInt copy = first;
-  return copy += second;
-}
-UBigInt operator-(const UBigInt &first, const UBigInt &second) {
-  if (&first == &second || first == second) {
-    return UBigInt(0);
-  }
-  UBigInt copy = first;
-  return copy -= second;
-}
-UBigInt operator*(const UBigInt &first, const UBigInt &second) {
-  UBigInt copy = first;
-  return copy *= second;
-}
-UBigInt operator/(const UBigInt &first, const UBigInt &second) {
-  if (&first == &second || first == second) {
-    return UBigInt(1);
-  }
-  UBigInt copy = first;
-  return copy /= second;
-}
-UBigInt operator%(const UBigInt &first, const UBigInt &second) {
-  if (&first == &second || first == second) {
-    return UBigInt(0);
-  }
-  UBigInt copy = first;
-  return copy %= second;
 }
 
 UBigInt &operator+=(UBigInt &bigint, u_int64_t number) {
@@ -321,27 +294,6 @@ UBigInt &operator%=(UBigInt &bigint, u_int64_t div) {
   return bigint %= UBigInt(div);
 }
 
-UBigInt operator+(const UBigInt &bigint, u_int64_t number) {
-  UBigInt copy = bigint;
-  return copy += number;
-}
-UBigInt operator-(const UBigInt &bigint, u_int64_t number) {
-  UBigInt copy = bigint;
-  return copy -= number;
-}
-UBigInt operator*(const UBigInt &bigint, u_int64_t number) {
-  UBigInt copy = bigint;
-  return copy *= number;
-}
-UBigInt operator/(const UBigInt &bigint, u_int64_t number) {
-  UBigInt copy = bigint;
-  return copy /= number;
-}
-UBigInt operator%(const UBigInt &bigint, u_int64_t div) {
-  UBigInt copy = bigint;
-  return copy %= div;
-}
-
 bool operator<(const UBigInt &first, const UBigInt &second) {
   if (&first == &second) {
     return false;
@@ -356,15 +308,6 @@ bool operator<(const UBigInt &first, const UBigInt &second) {
     }
   }
   return false;
-}
-bool operator>(const UBigInt &first, const UBigInt &second) {
-  return second < first;
-}
-bool operator<=(const UBigInt &first, const UBigInt &second) {
-  return !(second < first);
-}
-bool operator>=(const UBigInt &first, const UBigInt &second) {
-  return !(first < second);
 }
 bool operator==(const UBigInt &first, const UBigInt &second) {
   if (&first == &second) {
@@ -381,9 +324,6 @@ bool operator==(const UBigInt &first, const UBigInt &second) {
   }
   return true;
 }
-bool operator!=(const UBigInt &first, const UBigInt &second) {
-  return !(first == second);
-}
 
 bool operator<(const UBigInt &bigint, u_int64_t number) {
   if (bigint.storage_.size() > 2) {
@@ -392,44 +332,16 @@ bool operator<(const UBigInt &bigint, u_int64_t number) {
   return static_cast<u_int64_t>(bigint) < number;
 }
 bool operator>(const UBigInt &bigint, u_int64_t number) {
-  return number < bigint;
-}
-bool operator<=(const UBigInt &bigint, u_int64_t number) {
-  return !(number < bigint);
-}
-bool operator>=(const UBigInt &bigint, u_int64_t number) {
-  return !(bigint < number);
+  if (bigint.storage_.size() > 2) {
+    return true;
+  }
+  return number < static_cast<u_int64_t>(bigint);
 }
 bool operator==(const UBigInt &bigint, u_int64_t number) {
   if (bigint.storage_.size() > 2) {
     return false;
   }
   return static_cast<u_int64_t>(bigint) == number;
-}
-bool operator!=(const UBigInt &bigint, u_int64_t number) {
-  return !(bigint == number);
-}
-
-bool operator<(u_int64_t number, const UBigInt &bigint) {
-  if (bigint.storage_.size() > 2) {
-    return true;
-  }
-  return number < static_cast<u_int64_t>(bigint);
-}
-bool operator>(u_int64_t number, const UBigInt &bigint) {
-  return bigint < number;
-}
-bool operator<=(u_int64_t number, const UBigInt &bigint) {
-  return !(bigint < number);
-}
-bool operator>=(u_int64_t number, const UBigInt &bigint) {
-  return !(number < bigint);
-}
-bool operator==(u_int64_t number, const UBigInt &bigint) {
-  return bigint == number;
-}
-bool operator!=(u_int64_t number, const UBigInt &bigint) {
-  return !(bigint == number);
 }
 
 UBigInt &operator<<=(UBigInt &bigint, size_t shift) {
@@ -457,14 +369,6 @@ UBigInt &operator>>=(UBigInt &bigint, size_t shift) {
     bigint /= (1ull << shift);
   }
   return bigint;
-}
-UBigInt operator<<(const UBigInt &bigint, size_t shift) {
-  UBigInt copy = bigint;
-  return copy <<= shift;
-}
-UBigInt operator>>(const UBigInt &bigint, size_t shift) {
-  UBigInt copy = bigint;
-  return copy >>= shift;
 }
 
 UBigInt::operator u_int64_t() const {
@@ -640,7 +544,7 @@ UBigInt::Approximation UBigInt::GetApproximation() const {
   if (storage_.size() == 0) {
     return {0, 0};
   }
-  static const long double kPowerRatio = log2f64x(10);
+  static const long double kPowerRatio = log2l(10);
   size_t power_of_2 = 32 * (storage_.size());
   u_int32_t greatest = storage_.back();
   while (greatest < (1u << 31)) {
