@@ -38,26 +38,26 @@ class BigIntDivisionByZero : public MachineError {
 class UBigInt {
  public:
   UBigInt();
-  explicit UBigInt(u_int64_t);
+  explicit UBigInt(uint64_t);
   template <std::integral Sub64Int>
   explicit UBigInt(Sub64Int integer) : UBigInt() {
     if (integer < 0) {
       throw UBigIntUnderflow{};
     }
-    *this = static_cast<u_int64_t>(integer);
+    *this = static_cast<uint64_t>(integer);
   }
   UBigInt(const UBigInt &) = default;
   UBigInt(UBigInt &&) = default;
 
   UBigInt &operator=(const UBigInt &) = default;
   UBigInt &operator=(UBigInt &&) = default;
-  UBigInt &operator=(u_int64_t);
+  UBigInt &operator=(uint64_t);
   template <std::integral Sub64Int>
   UBigInt &operator=(Sub64Int integer) {
     if (integer < 0) {
       throw UBigIntUnderflow{};
     }
-    return *this = static_cast<u_int64_t>(integer);
+    return *this = static_cast<uint64_t>(integer);
   }
 
   friend UBigInt &operator+=(UBigInt &, const UBigInt &);
@@ -65,11 +65,11 @@ class UBigInt {
   friend UBigInt &operator*=(UBigInt &, const UBigInt &);
   friend UBigInt &operator/=(UBigInt &, const UBigInt &);
   friend UBigInt &operator%=(UBigInt &, const UBigInt &);
-  friend UBigInt &operator+=(UBigInt &, u_int64_t);
-  friend UBigInt &operator-=(UBigInt &, u_int64_t);
-  friend UBigInt &operator*=(UBigInt &, u_int64_t);
-  friend UBigInt &operator/=(UBigInt &, u_int64_t);
-  friend UBigInt &operator%=(UBigInt &, u_int64_t);
+  friend UBigInt &operator+=(UBigInt &, uint64_t);
+  friend UBigInt &operator-=(UBigInt &, uint64_t);
+  friend UBigInt &operator*=(UBigInt &, uint64_t);
+  friend UBigInt &operator/=(UBigInt &, uint64_t);
+  friend UBigInt &operator%=(UBigInt &, uint64_t);
 
   friend UBigInt operator+(const UBigInt &first, const UBigInt &second) {
     UBigInt copy(first);
@@ -116,9 +116,9 @@ class UBigInt {
     return !(first == second);
   }
 
-  friend bool operator<(const UBigInt &, u_int64_t);
-  friend bool operator==(const UBigInt &, u_int64_t);
-  friend bool operator>(const UBigInt &, u_int64_t);
+  friend bool operator<(const UBigInt &, uint64_t);
+  friend bool operator==(const UBigInt &, uint64_t);
+  friend bool operator>(const UBigInt &, uint64_t);
 
   friend UBigInt &operator<<=(UBigInt &, size_t);
   friend UBigInt &operator>>=(UBigInt &, size_t);
@@ -131,8 +131,8 @@ class UBigInt {
     return copy >>= shift;
   }
 
-  explicit operator u_int64_t() const;
-  explicit operator u_int32_t() const;
+  explicit operator uint64_t() const;
+  explicit operator uint32_t() const;
 
   friend UBigInt Power(const UBigInt &, size_t);
   friend UBigInt GCD(const UBigInt &, const UBigInt &);
@@ -150,7 +150,7 @@ class UBigInt {
   ~UBigInt() = default;
 
  private:
-  std::deque<u_int32_t> storage_;
+  std::deque<uint32_t> storage_;
   void Shrink() noexcept;
 };
 
@@ -160,70 +160,70 @@ template <std::integral Sub64Int>
 UBigInt &operator+=(UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     if (integer == std::numeric_limits<int64_t>::min()) {
-      return bigint -= (1ull << 63);
+      return bigint -= static_cast<uint64_t>(1ull << 63);
     }
-    return bigint -= (-static_cast<int64_t>(integer));
+    return bigint -= static_cast<uint64_t>(-static_cast<int64_t>(integer));
   }
-  return bigint += static_cast<u_int64_t>(integer);
+  return bigint += static_cast<uint64_t>(integer);
 }
 template <std::integral Sub64Int>
 UBigInt &operator-=(UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     if (integer == std::numeric_limits<int64_t>::min()) {
-      return bigint += (1ull << 63);
+      return bigint += static_cast<uint64_t>(1ull << 63);
     }
-    return bigint += (-static_cast<int64_t>(integer));
+    return bigint += static_cast<uint64_t>(-static_cast<int64_t>(integer));
   }
-  return bigint -= static_cast<u_int64_t>(integer);
+  return bigint -= static_cast<uint64_t>(integer);
 }
 template <std::integral Sub64Int>
 UBigInt &operator*=(UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     throw UBigIntUnderflow{};
   }
-  return bigint *= static_cast<u_int64_t>(integer);
+  return bigint *= static_cast<uint64_t>(integer);
 }
 template <std::integral Sub64Int>
 UBigInt &operator/=(UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     throw UBigIntUnderflow{};
   }
-  return bigint /= static_cast<u_int64_t>(integer);
+  return bigint /= static_cast<uint64_t>(integer);
 }
 template <std::integral Sub64Int>
 UBigInt &operator%=(UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     if (integer == std::numeric_limits<int64_t>::min()) {
-      return bigint %= (1ull << 63);
+      return bigint %= static_cast<uint64_t>(1ull << 63);
     }
-    return bigint %= (-static_cast<int64_t>(integer));
+    return bigint %= static_cast<uint64_t>(-static_cast<int64_t>(integer));
   }
-  return bigint %= static_cast<u_int64_t>(integer);
+  return bigint %= static_cast<uint64_t>(integer);
 }
 
 template <std::integral Sub64Int>
 UBigInt operator+(const UBigInt &bigint, Sub64Int integer) {
-  UBigInt copy = bigint;
+  UBigInt copy(bigint);
   return copy += integer;
 }
 template <std::integral Sub64Int>
 UBigInt operator-(const UBigInt &bigint, Sub64Int integer) {
-  UBigInt copy = bigint;
+  UBigInt copy(bigint);
   return copy -= integer;
 }
 template <std::integral Sub64Int>
 UBigInt operator*(const UBigInt &bigint, Sub64Int integer) {
-  UBigInt copy = bigint;
+  UBigInt copy(bigint);
   return copy *= integer;
 }
 template <std::integral Sub64Int>
 UBigInt operator/(const UBigInt &bigint, Sub64Int integer) {
-  UBigInt copy = bigint;
+  UBigInt copy(bigint);
   return copy /= integer;
 }
 template <std::integral Sub64Int>
 UBigInt operator%(const UBigInt &bigint, Sub64Int integer) {
-  UBigInt copy = bigint;
+  UBigInt copy(bigint);
   return copy %= integer;
 }
 
@@ -256,42 +256,42 @@ bool operator<(const UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     return false;
   }
-  return bigint < static_cast<u_int64_t>(integer);
+  return bigint < static_cast<uint64_t>(integer);
 }
 template <std::integral Sub64Int>
 bool operator>(const UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     return true;
   }
-  return bigint > static_cast<u_int64_t>(integer);
+  return bigint > static_cast<uint64_t>(integer);
 }
 template <std::integral Sub64Int>
 bool operator<=(const UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     return false;
   }
-  return !(bigint > static_cast<u_int64_t>(integer));
+  return !(bigint > static_cast<uint64_t>(integer));
 }
 template <std::integral Sub64Int>
 bool operator>=(const UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     return true;
   }
-  return !(bigint < static_cast<u_int64_t>(integer));
+  return !(bigint < static_cast<uint64_t>(integer));
 }
 template <std::integral Sub64Int>
 bool operator==(const UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     return false;
   }
-  return bigint == static_cast<u_int64_t>(integer);
+  return bigint == static_cast<uint64_t>(integer);
 }
 template <std::integral Sub64Int>
 bool operator!=(const UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     return true;
   }
-  return !(bigint == static_cast<u_int64_t>(integer));
+  return !(bigint == static_cast<uint64_t>(integer));
 }
 
 template <std::integral Sub64Int>
