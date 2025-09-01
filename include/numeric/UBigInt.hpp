@@ -5,6 +5,10 @@
 #include <cstdint>
 #include <limits>
 
+uint64_t constexpr operator""_uint64(unsigned long long number) {
+  return static_cast<uint64_t>(number);
+}
+
 class UBigIntUnderflow : public MachineError {
  public:
   [[nodiscard]] const char *what() const noexcept override {
@@ -71,50 +75,8 @@ class UBigInt {
   friend UBigInt &operator/=(UBigInt &, uint64_t);
   friend UBigInt &operator%=(UBigInt &, uint64_t);
 
-  friend UBigInt operator+(const UBigInt &first, const UBigInt &second) {
-    UBigInt copy(first);
-    return copy += second;
-  }
-  friend UBigInt operator-(const UBigInt &first, const UBigInt &second) {
-    if (first == second) {
-      return UBigInt(0u);
-    }
-    UBigInt copy(first);
-    return copy -= second;
-  }
-  friend UBigInt operator*(const UBigInt &first, const UBigInt &second) {
-    UBigInt copy(first);
-    return copy *= second;
-  }
-  friend UBigInt operator/(const UBigInt &first, const UBigInt &second) {
-    if (first == second) {
-      return UBigInt(1u);
-    }
-    UBigInt copy(first);
-    return copy /= second;
-  }
-  friend UBigInt operator%(const UBigInt &first, const UBigInt &second) {
-    if (first == second) {
-      return UBigInt(0u);
-    }
-    UBigInt copy(first);
-    return copy %= second;
-  }
-
   friend bool operator<(const UBigInt &, const UBigInt &);
-  friend bool operator>(const UBigInt &first, const UBigInt &second) {
-    return second < first;
-  }
-  friend bool operator<=(const UBigInt &first, const UBigInt &second) {
-    return !(second < first);
-  }
-  friend bool operator>=(const UBigInt &first, const UBigInt &second) {
-    return !(first < second);
-  }
   friend bool operator==(const UBigInt &, const UBigInt &);
-  friend bool operator!=(const UBigInt &first, const UBigInt &second) {
-    return !(first == second);
-  }
 
   friend bool operator<(const UBigInt &, uint64_t);
   friend bool operator==(const UBigInt &, uint64_t);
@@ -122,14 +84,6 @@ class UBigInt {
 
   friend UBigInt &operator<<=(UBigInt &, size_t);
   friend UBigInt &operator>>=(UBigInt &, size_t);
-  friend UBigInt operator<<(const UBigInt &bigint, size_t shift) {
-    UBigInt copy(bigint);
-    return copy <<= shift;
-  }
-  friend UBigInt operator>>(const UBigInt &bigint, size_t shift) {
-    UBigInt copy(bigint);
-    return copy >>= shift;
-  }
 
   explicit operator uint64_t() const;
   explicit operator uint32_t() const;
@@ -154,13 +108,109 @@ class UBigInt {
   void Shrink() noexcept;
 };
 
+// operator overloads
+
+UBigInt operator+(const UBigInt &first, const UBigInt &second) {
+  UBigInt copy(first);
+  return std::move(copy += second);
+}
+UBigInt operator+(UBigInt &&first, const UBigInt &second) {
+  return std::move(first += second);
+}
+UBigInt operator+(const UBigInt &first, UBigInt &&second) {
+  return std::move(second += first);
+}
+UBigInt operator+(UBigInt &&first, UBigInt &&second) {
+  return std::move(first += second);
+}
+UBigInt operator-(const UBigInt &first, const UBigInt &second) {
+  if (first == second) {
+    return UBigInt(0);
+  }
+  UBigInt copy(first);
+  return std::move(copy -= second);
+}
+UBigInt operator-(UBigInt &&first, const UBigInt &second) {
+  return std::move(first -= second);
+}
+UBigInt operator-(UBigInt &&first, UBigInt &&second) {
+  return std::move(first -= second);
+}
+UBigInt operator*(const UBigInt &first, const UBigInt &second) {
+  UBigInt copy(first);
+  return std::move(copy *= second);
+}
+UBigInt operator*(UBigInt &&first, const UBigInt &second) {
+  return std::move(first *= second);
+}
+UBigInt operator*(UBigInt &&first, UBigInt &&second) {
+  return std::move(first *= second);
+}
+UBigInt operator*(const UBigInt &first, UBigInt &&second) {
+  return std::move(second *= first);
+}
+UBigInt operator/(const UBigInt &first, const UBigInt &second) {
+  if (first == second) {
+    return UBigInt(1);
+  }
+  UBigInt copy(first);
+  return std::move(copy /= second);
+}
+UBigInt operator/(UBigInt &&first, const UBigInt &second) {
+  return std::move(first /= second);
+}
+UBigInt operator/(UBigInt &&first, UBigInt &&second) {
+  return std::move(first /= second);
+}
+UBigInt operator%(const UBigInt &first, const UBigInt &second) {
+  if (first == second) {
+    return UBigInt(0);
+  }
+  UBigInt copy(first);
+  return std::move(copy %= second);
+}
+UBigInt operator%(UBigInt &&first, const UBigInt &second) {
+  return std::move(first -= second);
+}
+UBigInt operator%(UBigInt &&first, UBigInt &&second) {
+  return std::move(first -= second);
+}
+
+bool operator>(const UBigInt &first, const UBigInt &second) {
+  return second < first;
+}
+bool operator<=(const UBigInt &first, const UBigInt &second) {
+  return !(second < first);
+}
+bool operator>=(const UBigInt &first, const UBigInt &second) {
+  return !(first < second);
+}
+bool operator!=(const UBigInt &first, const UBigInt &second) {
+  return !(first == second);
+}
+
+UBigInt operator<<(const UBigInt &bigint, size_t shift) {
+  UBigInt copy(bigint);
+  return std::move(copy <<= shift);
+}
+UBigInt operator<<(UBigInt &&bigint, size_t shift) {
+  return std::move(bigint <<= shift);
+}
+UBigInt operator>>(const UBigInt &bigint, size_t shift) {
+  UBigInt copy(bigint);
+  return std::move(copy >>= shift);
+}
+UBigInt operator>>(UBigInt &&bigint, size_t shift) {
+  return std::move(bigint >>= shift);
+}
+
 // Loads of convenience operator templates
 
 template <std::integral Sub64Int>
 UBigInt &operator+=(UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     if (integer == std::numeric_limits<int64_t>::min()) {
-      return bigint -= static_cast<uint64_t>(1ull << 63);
+      return bigint -= static_cast<uint64_t>(1_uint64 << 63);
     }
     return bigint -= static_cast<uint64_t>(-static_cast<int64_t>(integer));
   }
@@ -170,7 +220,7 @@ template <std::integral Sub64Int>
 UBigInt &operator-=(UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     if (integer == std::numeric_limits<int64_t>::min()) {
-      return bigint += static_cast<uint64_t>(1ull << 63);
+      return bigint += static_cast<uint64_t>(1_uint64 << 63);
     }
     return bigint += static_cast<uint64_t>(-static_cast<int64_t>(integer));
   }
@@ -194,7 +244,7 @@ template <std::integral Sub64Int>
 UBigInt &operator%=(UBigInt &bigint, Sub64Int integer) {
   if (integer < 0) {
     if (integer == std::numeric_limits<int64_t>::min()) {
-      return bigint %= static_cast<uint64_t>(1ull << 63);
+      return bigint %= static_cast<uint64_t>(1_uint64 << 63);
     }
     return bigint %= static_cast<uint64_t>(-static_cast<int64_t>(integer));
   }
@@ -204,27 +254,47 @@ UBigInt &operator%=(UBigInt &bigint, Sub64Int integer) {
 template <std::integral Sub64Int>
 UBigInt operator+(const UBigInt &bigint, Sub64Int integer) {
   UBigInt copy(bigint);
-  return copy += integer;
+  return std::move(copy += integer);
+}
+template <std::integral Sub64Int>
+UBigInt operator+(UBigInt &&bigint, Sub64Int integer) {
+  return std::move(bigint += integer);
 }
 template <std::integral Sub64Int>
 UBigInt operator-(const UBigInt &bigint, Sub64Int integer) {
   UBigInt copy(bigint);
-  return copy -= integer;
+  return std::move(copy -= integer);
+}
+template <std::integral Sub64Int>
+UBigInt operator-(UBigInt &&bigint, Sub64Int integer) {
+  return std::move(bigint -= integer);
 }
 template <std::integral Sub64Int>
 UBigInt operator*(const UBigInt &bigint, Sub64Int integer) {
   UBigInt copy(bigint);
-  return copy *= integer;
+  return std::move(copy *= integer);
+}
+template <std::integral Sub64Int>
+UBigInt operator*(UBigInt &&bigint, Sub64Int integer) {
+  return std::move(bigint *= integer);
 }
 template <std::integral Sub64Int>
 UBigInt operator/(const UBigInt &bigint, Sub64Int integer) {
   UBigInt copy(bigint);
-  return copy /= integer;
+  return std::move(copy /= integer);
+}
+template <std::integral Sub64Int>
+UBigInt operator/(UBigInt &&bigint, Sub64Int integer) {
+  return std::move(bigint /= integer);
 }
 template <std::integral Sub64Int>
 UBigInt operator%(const UBigInt &bigint, Sub64Int integer) {
   UBigInt copy(bigint);
-  return copy %= integer;
+  return std::move(copy %= integer);
+}
+template <std::integral Sub64Int>
+UBigInt operator%(UBigInt &&bigint, Sub64Int integer) {
+  return std::move(bigint %= integer);
 }
 
 template <std::integral Sub64Int>
@@ -234,7 +304,7 @@ UBigInt operator+(Sub64Int integer, const UBigInt &bigint) {
 template <std::integral Sub64Int>
 UBigInt operator-(Sub64Int integer, const UBigInt &bigint) {
   UBigInt copy(integer);
-  return copy -= bigint;
+  return std::move(copy -= bigint);
 }
 template <std::integral Sub64Int>
 UBigInt operator*(Sub64Int integer, const UBigInt &bigint) {
@@ -243,12 +313,12 @@ UBigInt operator*(Sub64Int integer, const UBigInt &bigint) {
 template <std::integral Sub64Int>
 UBigInt operator/(Sub64Int integer, const UBigInt &bigint) {
   UBigInt copy(integer);
-  return copy /= bigint;
+  return std::move(copy /= bigint);
 }
 template <std::integral Sub64Int>
 UBigInt operator%(Sub64Int integer, const UBigInt &bigint) {
   UBigInt copy(integer);
-  return copy %= bigint;
+  return std::move(copy %= bigint);
 }
 
 template <std::integral Sub64Int>
