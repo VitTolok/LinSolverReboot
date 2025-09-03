@@ -272,8 +272,6 @@ TEST_F(Sub64OperatorTests, LeftShiftTest) {
     ASSERT_EQ((number = first) <<= second, first << second);
     first = dist(rng);
     second = dist(rng) % 1024;
-    std::cout << (UBigInt(first) << second).Exact() << '\n';
-    std::cout << (UBigInt(first) * Power(UBigInt(2), second)).Exact() << '\n';
     ASSERT_EQ(UBigInt(first) << second, UBigInt(first) * Power(UBigInt(2), second));
   }
 }
