@@ -53,6 +53,9 @@ class BigInt {
   friend inline UBigInt &operator/=(UBigInt &, const BigInt &);
   friend inline UBigInt &operator%=(UBigInt &, const BigInt &);
 
+  friend inline BigInt operator-(const BigInt &);
+  friend inline BigInt operator-(BigInt &&);
+
   friend inline BigInt operator+(const BigInt &, const BigInt &);
   friend inline BigInt operator+(BigInt &&, const BigInt &);
   friend inline BigInt operator+(const BigInt &, BigInt &&);
@@ -217,6 +220,16 @@ class BigInt {
 };
 
 // inline function definitions
+
+inline BigInt operator-(const BigInt &bigint) {
+  BigInt copy(bigint);
+  copy.pos_ = !copy.pos_;
+  return std::move(copy);
+}
+inline BigInt operator-(BigInt &&bigint) {
+  bigint.pos_ = !bigint.pos_;
+  return std::move(bigint);
+}
 
 template <std::integral Sub64Int>
 inline BigInt &operator+=(BigInt &bigint, Sub64Int integer) {
