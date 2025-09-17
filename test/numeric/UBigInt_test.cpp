@@ -4,7 +4,7 @@
 
 class RandomIntTests : public ::testing::Test {
  public:
-  std::uniform_int_distribution<u_int64_t> dist;
+  std::uniform_int_distribution<uint64_t> dist;
   std::default_random_engine rng;
 };
 
@@ -22,17 +22,17 @@ TEST_F(ConstructorTests, DefaultConstructorTest) {
 
 TEST_F(ConstructorTests, NumberConstructorTest) {
   for (size_t i = 0; i < 100; i++) {
-    u_int64_t number = dist(rng);
+    uint64_t number = dist(rng);
     UBigInt bigint(number);
     ASSERT_EQ(bigint, number);
-    ASSERT_EQ(static_cast<u_int32_t>(bigint), number % (1ull << 32));
-    ASSERT_EQ(static_cast<u_int64_t>(bigint), number);
+    ASSERT_EQ(static_cast<uint32_t>(bigint), number % (1ull << 32));
+    ASSERT_EQ(static_cast<uint64_t>(bigint), number);
   }
 }
 
 TEST_F(ConstructorTests, CopyConstructorTest) {
   for (size_t i = 0; i < 100; i++) {
-    u_int64_t number = dist(rng);
+    uint64_t number = dist(rng);
     const UBigInt first(number);
     auto copy = first;
     ASSERT_EQ(first, number);
@@ -41,7 +41,7 @@ TEST_F(ConstructorTests, CopyConstructorTest) {
 }
 TEST_F(ConstructorTests, MoveConstructorTest) {
   for (size_t i = 0; i < 100; i++) {
-    u_int64_t number = dist(rng);
+    uint64_t number = dist(rng);
     UBigInt first(number);
     auto copy = std::move(first);
     ASSERT_EQ(first, 0);
@@ -53,7 +53,7 @@ class AssOperatorTests : public RandomIntTests {};
 
 TEST_F(AssOperatorTests, CopyOperatorTest) {
   for (size_t i = 0; i < 100; i++) {
-    u_int64_t number = dist(rng);
+    uint64_t number = dist(rng);
     const UBigInt first(number);
     UBigInt copy;
     copy = first;
@@ -63,7 +63,7 @@ TEST_F(AssOperatorTests, CopyOperatorTest) {
 }
 TEST_F(AssOperatorTests, MoveOperatorTest) {
   for (size_t i = 0; i < 100; i++) {
-    u_int64_t number = dist(rng);
+    uint64_t number = dist(rng);
     UBigInt first(number);
     UBigInt copy;
     copy = std::move(first);
@@ -113,7 +113,7 @@ class Sub64OperatorTests : public RandomIntTests {};
 TEST_F(Sub64OperatorTests, AddTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng);
-    auto second = dist(rng) % (std::numeric_limits<u_int64_t>::max() - first);
+    auto second = dist(rng) % (std::numeric_limits<uint64_t>::max() - first);
     UBigInt number(first);
     ASSERT_EQ(UBigInt(first) + UBigInt(second), first + second);
     ASSERT_EQ(UBigInt(first) + second, first + second);
@@ -143,8 +143,8 @@ TEST_F(Sub64OperatorTests, SubTest) {
 
 TEST_F(Sub64OperatorTests, MulTest) {
   for (size_t i = 0; i < 1000; i++) {
-    auto first = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
-    auto second = dist(rng) % (std::numeric_limits<u_int64_t>::max() / first);
+    auto first = 1 + (dist(rng) % std::numeric_limits<uint64_t>::max());
+    auto second = dist(rng) % (std::numeric_limits<uint64_t>::max() / first);
     ASSERT_EQ(UBigInt(first) * 0, 0);
     ASSERT_EQ(UBigInt(first) * 1, first);
     ASSERT_EQ(UBigInt(first) * UBigInt(second), first * second);
@@ -158,8 +158,8 @@ TEST_F(Sub64OperatorTests, MulTest) {
 
 TEST_F(Sub64OperatorTests, DivTest) {
   for (size_t i = 0; i < 1000; i++) {
-    auto first = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
-    auto second = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
+    auto first = 1 + (dist(rng) % std::numeric_limits<uint64_t>::max());
+    auto second = 1 + (dist(rng) % std::numeric_limits<uint64_t>::max());
     UBigInt number(first);
     ASSERT_THROW(UBigInt(first) / 0, BigIntDivisionByZero);
     ASSERT_THROW(number /= 0, BigIntDivisionByZero);
@@ -174,8 +174,8 @@ TEST_F(Sub64OperatorTests, DivTest) {
 
 TEST_F(Sub64OperatorTests, ModTest) {
   for (size_t i = 0; i < 1000; i++) {
-    auto first = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
-    auto second = 1 + (dist(rng) % std::numeric_limits<u_int64_t>::max());
+    auto first = 1 + (dist(rng) % std::numeric_limits<uint64_t>::max());
+    auto second = 1 + (dist(rng) % std::numeric_limits<uint64_t>::max());
     UBigInt number(first);
     ASSERT_THROW(UBigInt(first) % 0, BigIntDivisionByZero);
     ASSERT_THROW(number %= 0, BigIntDivisionByZero);

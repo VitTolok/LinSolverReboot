@@ -4,7 +4,7 @@
 #include <random>
 
 class RandomIntTests : public ::testing::Test {
-public:
+ public:
   std::uniform_int_distribution<int64_t> dist;
   std::default_random_engine rng;
 };
@@ -89,14 +89,10 @@ TEST_P(StreamConsistencyTests, StreamConsistencyTest) {
 }
 
 INSTANTIATE_TEST_SUITE_P(StreamConsistency, StreamConsistencyTests,
-                         ::testing::Values("123456", "-1.23456e127",
-                                           "9.99999e999", "-1e6", "6.66e4321",
-                                           "-4.3e534", "6.746e645",
-                                           "-1.5876e1000", "73645", "-4090",
-                                           "420", "-69", "3", "0"));
+                         ::testing::Values("123456", "-1.23456e127", "9.99999e999", "-1e6", "6.66e4321", "-4.3e534",
+                                           "6.746e645", "-1.5876e1000", "73645", "-4090", "420", "-69", "3", "0"));
 
-class StreamStandartizationTests
-    : public ::testing::TestWithParam<std::pair<std::string, std::string>> {};
+class StreamStandartizationTests : public ::testing::TestWithParam<std::pair<std::string, std::string>> {};
 
 TEST_P(StreamStandartizationTests, StreamStandartizationTest) {
   BigInt number;
@@ -106,39 +102,29 @@ TEST_P(StreamStandartizationTests, StreamStandartizationTest) {
 
 INSTANTIATE_TEST_SUITE_P(
     StreamStandartization, StreamStandartizationTests,
-    ::testing::Values(std::make_pair("1000000", "1e6"),
-                      std::make_pair("1234567890987654321", "1.23457e18"),
-                      std::make_pair("-1.234567890e100", "-1.23457e100"),
-                      std::make_pair("1.0000e500", "1e500"),
-                      std::make_pair("-7.000001e15", "-7e15"),
-                      std::make_pair("123.456e56", "1.23456e58"),
-                      std::make_pair("1029384756.6574839201e73", "1.02938e82"),
-                      std::make_pair("1.234567e3", "1235"),
-                      std::make_pair("-9.999999e304", "-1e305"),
-                      std::make_pair("-0", "0")));
+    ::testing::Values(std::make_pair("1000000", "1e6"), std::make_pair("1234567890987654321", "1.23457e18"),
+                      std::make_pair("-1.234567890e100", "-1.23457e100"), std::make_pair("1.0000e500", "1e500"),
+                      std::make_pair("-7.000001e15", "-7e15"), std::make_pair("123.456e56", "1.23456e58"),
+                      std::make_pair("1029384756.6574839201e73", "1.02938e82"), std::make_pair("1.234567e3", "1235"),
+                      std::make_pair("-9.999999e304", "-1e305"), std::make_pair("-0", "0")));
 
 class Sub64OperatorTests : public RandomIntTests {};
 
 TEST_F(Sub64OperatorTests, AddTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng) % std::numeric_limits<int64_t>::max();
-    auto second =
-        dist(rng) % (std::numeric_limits<int64_t>::max() - std::abs(first));
+    auto second = dist(rng) % (std::numeric_limits<int64_t>::max() - std::abs(first));
     BigInt number(first);
     ASSERT_EQ(BigInt(first) + BigInt(second), first + second);
     ASSERT_EQ(BigInt(first) + second, first + second);
-    ASSERT_EQ(BigInt(first) + UBigInt(std::abs(second)),
-              first + std::abs(second));
+    ASSERT_EQ(BigInt(first) + UBigInt(std::abs(second)), first + std::abs(second));
     ASSERT_EQ(number += second, first + second);
     ASSERT_EQ((number = first) += BigInt(second), first + second);
-    ASSERT_EQ((number = first) += UBigInt(std::abs(second)),
-              first + std::abs(second));
-    ASSERT_EQ((number = std::min(first, second)) += number,
-              std::min(first, second) * 2);
+    ASSERT_EQ((number = first) += UBigInt(std::abs(second)), first + std::abs(second));
+    ASSERT_EQ((number = std::min(first, second)) += number, std::min(first, second) * 2);
     int64_t shift = dist(rng) % 256;
-    ASSERT_EQ((BigInt(first) << std::abs(shift)) +
-                  (BigInt(second) << std::abs(shift)),
-              BigInt(first + second) << std::abs(shift));
+    ASSERT_EQ((BigInt(first) << std::abs(shift)) + (BigInt(second) << std::abs(shift)), BigInt(first + second)
+                                                                                            << std::abs(shift));
   }
 }
 
@@ -149,17 +135,13 @@ TEST_F(Sub64OperatorTests, SubTest) {
     BigInt number(first);
     ASSERT_EQ(BigInt(first) - BigInt(second), first - second);
     ASSERT_EQ(BigInt(first) - second, first - second);
-    ASSERT_EQ(BigInt(first) - UBigInt(std::abs(second)),
-              first - std::abs(second));
+    ASSERT_EQ(BigInt(first) - UBigInt(std::abs(second)), first - std::abs(second));
     ASSERT_EQ(number -= second, first - second);
     ASSERT_EQ((number = first) -= BigInt(second), first - second);
-    ASSERT_EQ((number = first) -= UBigInt(std::abs(second)),
-              first - std::abs(second));
+    ASSERT_EQ((number = first) -= UBigInt(std::abs(second)), first - std::abs(second));
     ASSERT_EQ((number = std::min(first, second)) -= number, 0);
-    int64_t shift = dist(rng) % 256;
-    ASSERT_EQ((BigInt(first) << std::abs(shift)) -
-                  (BigInt(second) << std::abs(shift)),
-              BigInt(first - second) << std::abs(shift));
+    int64_t shift = std::abs(dist(rng) % 256);
+    ASSERT_EQ((BigInt(first) << shift) - (BigInt(second) << shift), BigInt(first - second) << shift);
   }
 }
 
@@ -170,18 +152,14 @@ TEST_F(Sub64OperatorTests, MulTest) {
     BigInt number(first);
     ASSERT_EQ(BigInt(first) * BigInt(second), first * second);
     ASSERT_EQ(BigInt(first) * second, first * second);
-    ASSERT_EQ(BigInt(first) * UBigInt(std::abs(second)),
-              first * std::abs(second));
+    ASSERT_EQ(BigInt(first) * UBigInt(std::abs(second)), first * std::abs(second));
     ASSERT_EQ(number *= second, first * second);
     ASSERT_EQ((number = first) *= BigInt(second), first * second);
-    ASSERT_EQ((number = first) *= UBigInt(std::abs(second)),
-              first * std::abs(second));
-    ASSERT_EQ((number = std::min(first, second)) *= number,
-              std::min(first, second) * std::min(first, second));
+    ASSERT_EQ((number = first) *= UBigInt(std::abs(second)), first * std::abs(second));
+    ASSERT_EQ((number = std::min(first, second)) *= number, std::min(first, second) * std::min(first, second));
     int64_t shift = dist(rng) % 256;
-    ASSERT_EQ((BigInt(first) << std::abs(shift)) *
-                  (BigInt(second) << std::abs(shift)),
-              BigInt(first * second) << std::abs(shift * 2));
+    ASSERT_EQ((BigInt(first) << std::abs(shift)) * (BigInt(second) << std::abs(shift)), BigInt(first * second)
+                                                                                            << std::abs(shift * 2));
   }
 }
 
@@ -192,17 +170,13 @@ TEST_F(Sub64OperatorTests, DivTest) {
     BigInt number(first);
     ASSERT_EQ(BigInt(first) / BigInt(second), first / second);
     ASSERT_EQ(BigInt(first) / second, first / second);
-    ASSERT_EQ(BigInt(first) / UBigInt(std::abs(second)),
-              first / std::abs(second));
+    ASSERT_EQ(BigInt(first) / UBigInt(std::abs(second)), first / std::abs(second));
     ASSERT_EQ(number /= second, first / second);
     ASSERT_EQ((number = first) /= BigInt(second), first / second);
-    ASSERT_EQ((number = first) /= UBigInt(std::abs(second)),
-              first / std::abs(second));
+    ASSERT_EQ((number = first) /= UBigInt(std::abs(second)), first / std::abs(second));
     ASSERT_EQ((number = std::min(first, second)) /= number, 1);
     int64_t shift = dist(rng) % 256;
-    ASSERT_EQ((BigInt(first) << std::abs(shift)) /
-                  (BigInt(second) << std::abs(shift)),
-              BigInt(first / second));
+    ASSERT_EQ((BigInt(first) << std::abs(shift)) / (BigInt(second) << std::abs(shift)), BigInt(first / second));
   }
 }
 
@@ -213,17 +187,14 @@ TEST_F(Sub64OperatorTests, ModTest) {
     BigInt number(first);
     ASSERT_EQ(BigInt(first) % BigInt(second), first % second);
     ASSERT_EQ(BigInt(first) % second, first % second);
-    ASSERT_EQ(BigInt(first) % UBigInt(std::abs(second)),
-              first % std::abs(second));
+    ASSERT_EQ(BigInt(first) % UBigInt(std::abs(second)), first % std::abs(second));
     ASSERT_EQ(number %= second, first % second);
     ASSERT_EQ((number = first) %= BigInt(second), first % second);
-    ASSERT_EQ((number = first) %= UBigInt(std::abs(second)),
-              first % std::abs(second));
+    ASSERT_EQ((number = first) %= UBigInt(std::abs(second)), first % std::abs(second));
     ASSERT_EQ((number = std::min(first, second)) %= number, 0);
     int64_t shift = dist(rng) % 256;
-    ASSERT_EQ((BigInt(first) << std::abs(shift)) %
-                  (BigInt(second) << std::abs(shift)),
-              BigInt(first % second) << std::abs(shift));
+    ASSERT_EQ((BigInt(first) << std::abs(shift)) % (BigInt(second) << std::abs(shift)), BigInt(first % second)
+                                                                                            << std::abs(shift));
   }
 }
 
@@ -233,15 +204,12 @@ TEST_F(Sub64OperatorTests, LTTest) {
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
     ASSERT_FALSE(BigInt(first) < BigInt(first));
     ASSERT_EQ(BigInt(first) < BigInt(second), first < second);
-    ASSERT_EQ(BigInt(first) < UBigInt(std::abs(second)),
-              first < std::abs(second));
+    ASSERT_EQ(BigInt(first) < UBigInt(std::abs(second)), first < std::abs(second));
     ASSERT_EQ(BigInt(first) < second, first < second);
-    ASSERT_EQ(UBigInt(std::abs(first)) < BigInt(second),
-              std::abs(first) < second);
+    ASSERT_EQ(UBigInt(std::abs(first)) < BigInt(second), std::abs(first) < second);
     ASSERT_EQ(first < BigInt(second), first < second);
     auto shift = std::abs(dist(rng) % 256);
-    ASSERT_EQ((BigInt(first) << shift) < (BigInt(second) << shift),
-              first < second);
+    ASSERT_EQ((BigInt(first) << shift) < (BigInt(second) << shift), first < second);
   }
 }
 TEST_F(Sub64OperatorTests, GTTest) {
@@ -250,15 +218,12 @@ TEST_F(Sub64OperatorTests, GTTest) {
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
     ASSERT_FALSE(BigInt(first) > BigInt(first));
     ASSERT_EQ(BigInt(first) > BigInt(second), first > second);
-    ASSERT_EQ(BigInt(first) > UBigInt(std::abs(second)),
-              first > std::abs(second));
+    ASSERT_EQ(BigInt(first) > UBigInt(std::abs(second)), first > std::abs(second));
     ASSERT_EQ(BigInt(first) > second, first > second);
-    ASSERT_EQ(UBigInt(std::abs(first)) > BigInt(second),
-              std::abs(first) > second);
+    ASSERT_EQ(UBigInt(std::abs(first)) > BigInt(second), std::abs(first) > second);
     ASSERT_EQ(first > BigInt(second), first > second);
     auto shift = std::abs(dist(rng) % 256);
-    ASSERT_EQ((BigInt(first) << shift) > (BigInt(second) << shift),
-              first > second);
+    ASSERT_EQ((BigInt(first) << shift) > (BigInt(second) << shift), first > second);
   }
 }
 TEST_F(Sub64OperatorTests, LETest) {
@@ -267,15 +232,12 @@ TEST_F(Sub64OperatorTests, LETest) {
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
     ASSERT_TRUE(BigInt(first) <= BigInt(first));
     ASSERT_EQ(BigInt(first) <= BigInt(second), first <= second);
-    ASSERT_EQ(BigInt(first) <= UBigInt(std::abs(second)),
-              first <= std::abs(second));
+    ASSERT_EQ(BigInt(first) <= UBigInt(std::abs(second)), first <= std::abs(second));
     ASSERT_EQ(BigInt(first) <= second, first <= second);
-    ASSERT_EQ(UBigInt(std::abs(first)) <= BigInt(second),
-              std::abs(first) <= second);
+    ASSERT_EQ(UBigInt(std::abs(first)) <= BigInt(second), std::abs(first) <= second);
     ASSERT_EQ(first <= BigInt(second), first <= second);
     auto shift = std::abs(dist(rng) % 256);
-    ASSERT_EQ((BigInt(first) << shift) <= (BigInt(second) << shift),
-              first <= second);
+    ASSERT_EQ((BigInt(first) << shift) <= (BigInt(second) << shift), first <= second);
   }
 }
 TEST_F(Sub64OperatorTests, GETest) {
@@ -284,15 +246,12 @@ TEST_F(Sub64OperatorTests, GETest) {
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
     ASSERT_TRUE(BigInt(first) >= BigInt(first));
     ASSERT_EQ(BigInt(first) >= BigInt(second), first >= second);
-    ASSERT_EQ(BigInt(first) >= UBigInt(std::abs(second)),
-              first >= std::abs(second));
+    ASSERT_EQ(BigInt(first) >= UBigInt(std::abs(second)), first >= std::abs(second));
     ASSERT_EQ(BigInt(first) >= second, first >= second);
-    ASSERT_EQ(UBigInt(std::abs(first)) >= BigInt(second),
-              std::abs(first) >= second);
+    ASSERT_EQ(UBigInt(std::abs(first)) >= BigInt(second), std::abs(first) >= second);
     ASSERT_EQ(first >= BigInt(second), first >= second);
     auto shift = std::abs(dist(rng) % 256);
-    ASSERT_EQ((BigInt(first) << shift) >= (BigInt(second) << shift),
-              first >= second);
+    ASSERT_EQ((BigInt(first) << shift) >= (BigInt(second) << shift), first >= second);
   }
 }
 TEST_F(Sub64OperatorTests, EQTest) {
@@ -301,15 +260,12 @@ TEST_F(Sub64OperatorTests, EQTest) {
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
     ASSERT_TRUE(BigInt(first) == BigInt(first));
     ASSERT_EQ(BigInt(first) == BigInt(second), first == second);
-    ASSERT_EQ(BigInt(first) == UBigInt(std::abs(second)),
-              first == std::abs(second));
+    ASSERT_EQ(BigInt(first) == UBigInt(std::abs(second)), first == std::abs(second));
     ASSERT_EQ(BigInt(first) == second, first == second);
-    ASSERT_EQ(UBigInt(std::abs(first)) == BigInt(second),
-              std::abs(first) == second);
+    ASSERT_EQ(UBigInt(std::abs(first)) == BigInt(second), std::abs(first) == second);
     ASSERT_EQ(first == BigInt(second), first == second);
     auto shift = std::abs(dist(rng) % 256);
-    ASSERT_EQ((BigInt(first) << shift) == (BigInt(second) << shift),
-              first == second);
+    ASSERT_EQ((BigInt(first) << shift) == (BigInt(second) << shift), first == second);
   }
 }
 TEST_F(Sub64OperatorTests, NETest) {
@@ -318,15 +274,12 @@ TEST_F(Sub64OperatorTests, NETest) {
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
     ASSERT_FALSE(BigInt(first) != BigInt(first));
     ASSERT_EQ(BigInt(first) != BigInt(second), first != second);
-    ASSERT_EQ(BigInt(first) != UBigInt(std::abs(second)),
-              first != std::abs(second));
+    ASSERT_EQ(BigInt(first) != UBigInt(std::abs(second)), first != std::abs(second));
     ASSERT_EQ(BigInt(first) != second, first != second);
-    ASSERT_EQ(UBigInt(std::abs(first)) != BigInt(second),
-              std::abs(first) != second);
+    ASSERT_EQ(UBigInt(std::abs(first)) != BigInt(second), std::abs(first) != second);
     ASSERT_EQ(first != BigInt(second), first != second);
     auto shift = std::abs(dist(rng) % 256);
-    ASSERT_EQ((BigInt(first) << shift) != (BigInt(second) << shift),
-              first != second);
+    ASSERT_EQ((BigInt(first) << shift) != (BigInt(second) << shift), first != second);
   }
 }
 
@@ -341,8 +294,7 @@ TEST_F(Sub64OperatorTests, LeftShiftTest) {
     ASSERT_EQ((number = first) <<= second, first << second);
     first = dist(rng);
     second = dist(rng) % 1024;
-    ASSERT_EQ(BigInt(first) << second,
-              BigInt(first) * Power(UBigInt(2), second));
+    ASSERT_EQ(BigInt(first) << second, BigInt(first) * Power(UBigInt(2), second));
   }
 }
 
