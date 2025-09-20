@@ -6,6 +6,7 @@ class DecompInterface;
 }
 
 class DecompInterface : public Interface {
+  Q_OBJECT
  public:
   virtual void SetProgress(int16_t) override;
   explicit DecompInterface(QWidget *parent = nullptr);

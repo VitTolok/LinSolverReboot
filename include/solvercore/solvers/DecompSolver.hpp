@@ -4,30 +4,31 @@
 #include "rational.hpp"
 #include <sstream>
 
-struct DecompSolvableBase : public Solvable {
+struct DecompSolvable : public Solvable {
+  std::string input;
   enum class NumericType { kDouble, kRational } numeric_type;
-  explicit DecompSolvableBase(NumericType type) : numeric_type(type) {
-  }
-  virtual std::string Print() const = 0;
-};
-
-template <class Numeric>
-struct DecompSolvable : public DecompSolvableBase {
-  Matrix<Numeric> matrix;
-  DecompSolvable(std::string &&string, NumericType type) : DecompSolvableBase(type) {
-    std::istringstream(std::move(string)) >> matrix;
-  }
-  virtual std::string Print() const override {
-    return (std::ostringstream() << matrix).str();
+  DecompSolvable(std::string &&string, NumericType type) {
+    input = std::move(string);
+    numeric_type = type;
   }
   virtual ~DecompSolvable() override = default;
 };
 
 template <class Numeric>
 struct DecompSolution : public Solution {
-  DecompSolution(const Matrix<Numeric> &matrix, Progress *progress) : decomp(matrix, progress) {
+  std::string det;
+  std::string solved;
+  std::string lower;
+  std::string upper;
+  DecompSolution(const std::string &input, Progress *progress) {
+    Matrix<Numeric> matrix;
+    std::istringstream(input) >> matrix;
+    auto decomp = Decompose(matrix, progress);
+    det = decomp.det.has_value() ? (std::ostringstream() << *decomp.det).str() : "DNE";
+    solved = (std::ostringstream() << decomp.simple).str();
+    lower = decomp.lower.has_value() ? (std::ostringstream() << *decomp.lower).str() : "DNE";
+    upper = decomp.upper.has_value() ? (std::ostringstream() << *decomp.upper).str() : "DNE";
   }
-  Decompose<Numeric> decomp;
   virtual std::unique_ptr<Solution> Detatch() override {
     return std::make_unique<DecompSolution>(std::move(*this));
   }
@@ -43,11 +44,11 @@ struct DecompSolver : public Solver {
   }
 
   virtual void operator()(const Solvable &solvable) const override {
-    auto decomp_solvable = dynamic_cast<const DecompSolvable<Numeric> *>(&solvable);
+    auto decomp_solvable = dynamic_cast<const DecompSolvable *>(&solvable);
     if (decomp_solvable == nullptr) {
       throw InvalidSolutionType{};
     }
-    Finish(DecompSolution<Numeric>(decomp_solvable->matrix, &progress_));
+    Finish(DecompSolution<Numeric>(decomp_solvable->input, &progress_));
   }
 
   virtual ~DecompSolver() override = default;
@@ -59,14 +60,14 @@ struct DecompSolver : public Solver {
 inline std::unique_ptr<Solver> MakeDecompSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
                                                 const std::function<void(MachineError &&)> &terminator,
                                                 const Solvable &solvable) {
-  auto ptr = dynamic_cast<const DecompSolvableBase *>(&solvable);
+  auto ptr = dynamic_cast<const DecompSolvable *>(&solvable);
   if (ptr == nullptr) {
     throw InvalidSolutionType{};
   }
   switch (ptr->numeric_type) {
-    case DecompSolvableBase::NumericType::kDouble:
+    case DecompSolvable::NumericType::kDouble:
       return std::make_unique<DecompSolver<long double>>(progress, finisher, terminator);
-    case DecompSolvableBase::NumericType::kRational:
+    case DecompSolvable::NumericType::kRational:
       return std::make_unique<DecompSolver<Rational>>(progress, finisher, terminator);
     default:
       throw InvalidSolutionType{};

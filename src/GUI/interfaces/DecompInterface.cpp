@@ -1,9 +1,9 @@
 #include "DecompInterface.hpp"
 #include "ui_DecompInterface.h"
 #include "DecompSolver.hpp"
-#include "sstream"
+#include <sstream>
 
-using TypeIdentifyer = DecompSolvableBase::NumericType;
+using TypeIdentifyer = DecompSolvable::NumericType;
 
 void DecompInterface::SetProgress(int16_t progress) {
   ui_->progressBar->setValue(progress);
@@ -16,7 +16,7 @@ DecompInterface::DecompInterface(QWidget *parent) : Interface(parent), ui_(new U
 }
 
 void DecompInterface::ActivateInProgress(const Solvable &solvable) {
-  auto ptr = dynamic_cast<const DecompSolvableBase *>(&solvable);
+  auto ptr = dynamic_cast<const DecompSolvable *>(&solvable);
   if (ptr == nullptr) {
     throw WrongInterface{};
   }
@@ -32,29 +32,25 @@ void DecompInterface::ActivateInProgress(const Solvable &solvable) {
     default:
       throw WrongInterface{};
   }
-  ui_->source_matrix_text_edit->setPlainText(QString::fromStdString(ptr->Print()));
+  ui_->source_matrix_text_edit->setPlainText(QString::fromStdString(ptr->input));
   ui_->status->setText("Running...");
 }
 
 template <class Numeric>
 void PrintSolution(Ui::DecompInterface *ui, const DecompSolution<Numeric> &sol) {
-  ui->solved_text_browser->setPlainText(QString::fromStdString((std::ostringstream() << sol.decomp.simple).str()));
-  ui->det_text_browser->setPlainText(
-      QString::fromStdString(sol.decomp.det.has_value() ? (std::ostringstream() << *sol.decomp.det).str() : "DNE"));
-  ui->lower_text_browser->setPlainText(
-      QString::fromStdString(sol.decomp.lower.has_value() ? (std::ostringstream() << *sol.decomp.lower).str() : "DNE"));
-  ui->upper_text_browser->setPlainText(
-      QString::fromStdString(sol.decomp.upper.has_value() ? (std::ostringstream() << *sol.decomp.upper).str() : "DNE"));
+  ui->solved_text_browser->setPlainText(QString::fromStdString(sol.solved));
+  ui->det_text_browser->setPlainText(QString::fromStdString(sol.det));
+  ui->lower_text_browser->setPlainText(QString::fromStdString(sol.lower));
+  ui->upper_text_browser->setPlainText(QString::fromStdString(sol.upper));
 }
 
 void DecompInterface::ActivateSuccess(const Solvable &solvable, const Solution &solution) {
-  auto ptr = dynamic_cast<const DecompSolvableBase *>(&solvable);
+  auto ptr = dynamic_cast<const DecompSolvable *>(&solvable);
   if (ptr == nullptr) {
     throw WrongInterface{};
   }
   switch (ptr->numeric_type) {
     case TypeIdentifyer::kDouble:
-
       ui_->type_choice_combo_box->setCurrentIndex(
           ui_->type_choice_combo_box->findData(static_cast<int32_t>(TypeIdentifyer::kDouble)));
       PrintSolution(ui_, dynamic_cast<const DecompSolution<long double> &>(solution));
@@ -67,7 +63,7 @@ void DecompInterface::ActivateSuccess(const Solvable &solvable, const Solution &
     default:
       throw WrongInterface{};
   }
-  ui_->source_matrix_text_edit->setPlainText(QString::fromStdString(ptr->Print()));
+  ui_->source_matrix_text_edit->setPlainText(QString::fromStdString(ptr->input));
   ui_->status->setText("Finished.");
 }
 
@@ -77,27 +73,11 @@ void DecompInterface::ActivateError(const Solvable &solvable, const MachineError
 }
 
 std::unique_ptr<Process> DecompInterface::MakeProcess(QWidget *parent) {
-  switch (static_cast<TypeIdentifyer>(ui_->type_choice_combo_box->currentData().toInt())) {
-    case TypeIdentifyer::kDouble:
-      return std::make_unique<Process>(
-          Process::ProcType::kDecompProc,
-          std::make_unique<DecompSolvable<long double>>(ui_->source_matrix_text_edit->toPlainText().toStdString(),
-                                                        TypeIdentifyer::kDouble),
-          *this, parent);
-    case TypeIdentifyer::kRational:
-      try {
-        return std::make_unique<Process>(
-            Process::ProcType::kDecompProc,
-            std::make_unique<DecompSolvable<Rational>>(ui_->source_matrix_text_edit->toPlainText().toStdString(),
-                                                       TypeIdentifyer::kRational),
-            *this, parent);
-      } catch (std::exception &error) {
-        ui_->status->setText(
-            QString::fromStdString(std::string("Error: ") + typeid(error).name() + ": " + error.what()));
-      }
-    default:
-      throw MachineError{};
-  }
+  return std::make_unique<Process>(
+      Process::ProcType::kDecompProc,
+      std::make_unique<DecompSolvable>(ui_->source_matrix_text_edit->toPlainText().toStdString(),
+                                       static_cast<TypeIdentifyer>(ui_->type_choice_combo_box->currentData().toInt())),
+      *this, parent);
 }
 
 QPushButton *DecompInterface::ExecuteButton() {
