@@ -147,7 +147,10 @@ class Rational {
 
   Rational &Floor();
 
-  using Approximation = BigInt::Approximation;
+  struct Approximation {
+    long double multiplier;
+    int64_t power;
+  };
   Approximation GetApproximation() const;
 
  private:
@@ -339,6 +342,9 @@ inline Rational operator*(Integer &&integer, ORational &&rational) {
 }
 template <OnlyRational ORational, SomeInt Integer>
 inline Rational operator/(Integer &&integer, ORational &&rational) {
+  if (rational.num_ == 0) {
+    throw InvalidRational{};
+  }
   Rational inverse = std::forward<ORational>(rational) / std::forward<Integer>(integer);
   std::swap(const_cast<UBigInt &>(rational.num_.Abs()), inverse.den_);
   return inverse;

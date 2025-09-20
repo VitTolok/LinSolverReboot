@@ -2,6 +2,7 @@
 #include <cstring>
 #include <numeric>
 #include <sstream>
+#include <cmath>
 
 const BigInt &Rational::Num() const {
   return this->num_;
@@ -55,12 +56,26 @@ Rational &operator-=(Rational &first, Rational &&second) {
 }
 
 std::ostream &operator<<(std::ostream &out, const Rational &number) {
-  out << number.num_;
-  if (number.den_ != 1u) {
-    out << '/' << number.den_;
+  if (number == 0) {
+    return out << 0;
   }
-  return out;
+  if (number.num_.Abs() <= 1'000'000 && number.den_ <= 1'000'000) {
+    std::string numer = (std::ostringstream() << number.num_).str();
+    if (number.den_ == 1) {
+      return out << numer;
+    }
+    std::string denom = (std::ostringstream() << number.den_).str();
+    if (numer.size() + denom.size() <= 6) {
+      return out << numer << '/' << denom;
+    }
+  }
+  auto approx = number.GetApproximation();
+  if (std::abs(approx.power) <= 2) {
+    return out << (approx.multiplier * powl(10, approx.power));
+  }
+  return out << approx.multiplier << 'e' << approx.power;
 }
+
 std::istream &operator>>(std::istream &in, Rational &number) try {
   std::string input;
   in >> input;
@@ -73,22 +88,27 @@ std::istream &operator>>(std::istream &in, Rational &number) try {
   }
   size_t dot = input.find('.');
   size_t exp = input.find('e');
-  size_t mult = 0;
-  if (exp < input.size() && dot < exp) {
-    std::istringstream(input.substr(exp)) >> mult;
-    if (mult >= (exp - dot) - 1) {
-      std::istringstream(input) >> number.num_;
-      number.den_ = 1;
-      return in;
+  int64_t mult = 0;
+  if (exp < input.size()) {
+    if (exp < input.size() - 1) {
+      std::istringstream(input.c_str() + exp + 1) >> mult;
     }
+    input.resize(exp);
   }
-  if (dot >= input.size()) {
-    std::istringstream(input) >> number.num_;
-    number.den_ = 1u;
-    return in;
+  if (dot < input.size()) {
+    mult -= input.size() - dot - 1;
+    input.erase(dot, 1);
   }
   std::istringstream(input) >> number.num_;
-  number.den_ = 1_uint64;
+  if (mult > 0) {
+    number.num_ *= Power(UBigInt(10), mult);
+    number.den_ = 1;
+  } else if (mult == 0) {
+    number.den_ = 1;
+  } else {
+    number.den_ = Power(UBigInt(10), -mult);
+    number.Normalize();
+  }
   return in;
 } catch (...) {
   throw InvalidRationalString();
@@ -101,12 +121,25 @@ Rational::operator UBigInt() const {
   if (num_ < 0) {
     throw UBigIntUnderflow{};
   }
-  return std::move(const_cast<UBigInt &>((num_ / den_ * den_).Abs()));
+  return std::move(num_.Abs() / den_ * den_);
 }
 
 Rational &Rational::Floor() {
-  (num_ /= den_) *= den_;
+  num_ /= den_;
+  den_ = 1;
   return *this;
+}
+
+Rational::Approximation Rational::GetApproximation() const {
+  auto num_approx = num_.GetApproximation();
+  auto den_approx = den_.GetApproximation();
+  Approximation approx{num_approx.multiplier / den_approx.multiplier,
+                       static_cast<int64_t>(num_approx.power) - static_cast<int64_t>(den_approx.power)};
+  if (approx.multiplier < 1 - 5e-12) {
+    approx.multiplier *= 10;
+    ++approx.power;
+  }
+  return approx;
 }
 
 void Rational::Normalize() {
