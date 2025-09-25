@@ -1,11 +1,12 @@
 #pragma once
-#include "definitions.hpp"
 #include <iostream>
 #include <sstream>
 #include <vector>
 
+#include "definitions.hpp"
+
 class MatrixOutOfRange : public MachineError {
-public:
+ public:
   MatrixOutOfRange(size_t range, size_t reference) {
     message_ =
         (std::ostringstream() << "Matrix has " << range << " range but element "
@@ -17,23 +18,39 @@ public:
     return message_.c_str();
   }
 
-private:
+ private:
   std::string message_;
 };
 
 class InvalidMatrixBase : public MachineError {
-private:
+ private:
   std::string message_ = "Vector used for Matrix construction is invalid";
 };
 
+class InvalidMatrixOperation : public MachineError {
+ private:
+  std::string message_ =
+      "The requested operation cannot be performed on provided matrixes";
+};
+
 class InvalidMatrixString : public MachineError {
-private:
+ private:
   std::string message_ = "String used for Matrix construction is invalid";
 };
 
-template <class Numeric> class Matrix {
-public:
+template <class Numeric>
+class Matrix;
+
+template <class T>
+concept OnlyMatrix =
+    std::same_as<Matrix<typename std::decay_t<T>::numeric_t>, std::decay_t<T>>;
+
+template <class Numeric>
+class Matrix {
+ public:
   Matrix() : contents_(), rows_(0), cols_(0) {}
+
+  using numeric_t = Numeric;
 
   Matrix(size_t rows, size_t cols) {
     contents_ = std::vector(rows, std::vector(cols, Numeric(0)));
@@ -73,6 +90,19 @@ public:
     contents_ = source.contents_;
     rows_ = source.rows_;
     cols_ = source.cols_;
+  }
+
+  template <OnlyMatrix OtherMatrix>
+  explicit Matrix(OtherMatrix &&other)
+      : contents_(other.Rows(), std::vector<Numeric>(other.Cols(), Numeric(0))),
+        rows_(other.Rows()),
+        cols_(other.Cols()) {
+    using OtherNumericType = typename std::decay_t<OtherMatrix>::numeric_t;
+    for (size_t r = 0; r < rows_; ++r) {
+      for (size_t c = 0; c < cols_; ++c) {
+        contents_[r][c] = std::forward<OtherMatrix>(other)(r, c);
+      }
+    }
   }
 
   static Matrix<Numeric> Eye(const Numeric &value, size_t size) {
@@ -178,7 +208,44 @@ public:
 
   bool Empty() const noexcept { return rows_ == 0; }
 
-private:
+  template <class NumericA, OnlyMatrix OtherMatrix>
+  friend Matrix<NumericA> &operator+=(Matrix<NumericA> &, OtherMatrix &&);
+  template <class NumericA, OnlyMatrix OtherMatrix>
+  friend Matrix<NumericA> &operator-=(Matrix<NumericA> &, OtherMatrix &&);
+  template <class NumericA, OnlyMatrix OtherMatrix>
+  friend Matrix<NumericA> &operator*=(Matrix<NumericA> &, OtherMatrix &&);
+
+  template <class NumericA, class NumericB>
+  friend Matrix<NumericA> &operator+=(Matrix<NumericA> &, NumericB &&);
+  template <class NumericA, class NumericB>
+  friend Matrix<NumericA> &operator-=(Matrix<NumericA> &, NumericB &&);
+  template <class NumericA, class NumericB>
+  friend Matrix<NumericA> &operator*=(Matrix<NumericA> &, NumericB &&);
+  template <class NumericA, class NumericB>
+  friend Matrix<NumericA> &operator/=(Matrix<NumericA> &, NumericB &&);
+
+  template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+  friend auto operator+(LMatrix &&, RMatrix &&);
+  template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+  friend auto operator-(LMatrix &&, RMatrix &&);
+  template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+  friend auto operator*(LMatrix &&, RMatrix &&);
+
+  template <OnlyMatrix LMatrix, class RNumeric>
+  friend auto operator+(LMatrix &&, RNumeric &&);
+  template <OnlyMatrix LMatrix, class RNumeric>
+  friend auto operator-(LMatrix &&, RNumeric &&);
+  template <OnlyMatrix LMatrix, class RNumeric>
+  friend auto operator*(LMatrix &&, RNumeric &&);
+
+  template <class LNumeric, OnlyMatrix RMatrix>
+  friend auto operator+(LNumeric &&, RMatrix &&);
+  template <class LNumeric, OnlyMatrix RMatrix>
+  friend auto operator-(LNumeric &&, RMatrix &&);
+  template <class LNumeric, OnlyMatrix RMatrix>
+  friend auto operator*(LNumeric &&, RMatrix &&);
+
+ private:
   std::vector<std::vector<Numeric>> contents_;
   size_t rows_;
   size_t cols_;
@@ -193,11 +260,45 @@ private:
       }
     }
   }
+
+  template <class OtherNumeric>
+  void RightCompoundSub(Matrix<OtherNumeric> &other) const {
+    if (other.Rows() != rows_ || other.Cols() != cols_) {
+      throw InvalidMatrixOperation{};
+    }
+    for (size_t r = 0; r < rows_; ++r) {
+      for (size_t c = 0; c < cols_; ++c) {
+        other(r, c) = ((*this)(r, c)) - std::move(other(r, c));
+      }
+    }
+  }
+  template <class OtherNumeric>
+  void RightCompoundMult(Matrix<OtherNumeric> &other) const {
+    if (other.Rows() != cols_) {
+      throw InvalidMatrixOperation{};
+    }
+    std::vector<OtherNumeric> buffer;
+    for (size_t c = 0; c < other.Cols(); ++c) {
+      buffer.resize(rows_, Numeric(0));
+      for (size_t r = 0; r < rows_; ++r) {
+        buffer[r] = Numeric(0);
+        for (size_t k = 0; k < cols_; ++k) {
+          buffer[r] += (((*this)(r, k)) * other(k, c));
+        }
+      }
+      for (size_t r = 0; r < rows_; ++r) {
+        other(r, c) = std::move(buffer[r]);
+      }
+    }
+  }
 };
 
 template <class Numeric>
 std::ostream &operator<<(std::ostream &out, const Matrix<Numeric> &matrix) {
-  std::vector<size_t> lengths(matrix.Cols());
+  if (matrix.Empty()) {
+    return out;
+  }
+  std::vector<size_t> lengths(matrix.Cols(), 0);
   for (size_t col = 0; col < matrix.Cols(); col++) {
     for (size_t row = 0; row < matrix.Rows(); row++) {
       lengths[col] =
@@ -309,4 +410,236 @@ std::istream &operator>>(std::istream &in, Matrix<Numeric> &matrix) {
     throw InvalidMatrixString();
   }
   return in;
+}
+
+template <class Numeric, OnlyMatrix OtherMatrix>
+Matrix<Numeric> &operator+=(Matrix<Numeric> &self, OtherMatrix &&other) {
+  if (self.Rows() != other.Rows() || self.Cols() != other.Cols()) {
+    throw InvalidMatrixOperation{};
+  }
+  for (size_t i = 0; i < self.Rows(); ++i) {
+    for (size_t j = 0; j < self.Cols(); ++j) {
+      self(i, j) += std::forward<OtherMatrix>(other)(i, j);
+    }
+  }
+  return self;
+}
+template <class Numeric, OnlyMatrix OtherMatrix>
+Matrix<Numeric> &operator-=(Matrix<Numeric> &self, OtherMatrix &&other) {
+  if (self.Rows() != other.Rows() || self.Cols() != other.Cols()) {
+    throw InvalidMatrixOperation{};
+  }
+  for (size_t i = 0; i < self.Rows(); ++i) {
+    for (size_t j = 0; j < self.Cols(); ++j) {
+      self(i, j) -= std::forward<OtherMatrix>(other)(i, j);
+    }
+  }
+  return self;
+}
+template <class Numeric, OnlyMatrix OtherMatrix>
+Matrix<Numeric> &operator*=(Matrix<Numeric> &self, OtherMatrix &&other) {
+  if (self.Cols() != other.Rows()) {
+    throw InvalidMatrixOperation{};
+  }
+  if constexpr (std::is_same_v<typename std::decay_t<OtherMatrix>::numeric_t,
+                               Numeric>) {
+    if (&self == &other) {
+      return self = self * other;
+    }
+  }
+  std::vector<Numeric> buffer(other.Cols(), Numeric(0));
+  for (size_t r = 0; r < self.Rows(); ++r) {
+    buffer.resize(other.Cols(), Numeric(0));
+    for (size_t c = 0; c < other.Cols(); ++c) {
+      buffer[c] = Numeric(0);
+      for (size_t k = 0; k < self.Cols(); ++k) {
+        buffer[c] += self(r, k) * std::forward<OtherMatrix>(other)(k, c);
+      }
+    }
+    buffer.swap(self.contents_[r]);
+  }
+  return self;
+}
+
+template <class NumericA, class NumericB>
+Matrix<NumericA> &operator+=(Matrix<NumericA> &matrix, NumericB &&number) {
+  if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+    matrix(0, 0) += std::forward<NumericB>(number);
+    return matrix;
+  }
+  for (size_t r = 0; r < matrix.Rows(); ++r) {
+    for (size_t c = 0; c < matrix.Cols(); ++c) {
+      matrix(r, c) += number;
+    }
+  }
+  return matrix;
+}
+template <class NumericA, class NumericB>
+Matrix<NumericA> &operator-=(Matrix<NumericA> &matrix, NumericB &&number) {
+  if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+    matrix(0, 0) -= std::forward<NumericB>(number);
+    return matrix;
+  }
+  for (size_t r = 0; r < matrix.Rows(); ++r) {
+    for (size_t c = 0; c < matrix.Cols(); ++c) {
+      matrix(r, c) -= number;
+    }
+  }
+  return matrix;
+}
+template <class NumericA, class NumericB>
+Matrix<NumericA> &operator*=(Matrix<NumericA> &matrix, NumericB &&number) {
+  if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+    matrix(0, 0) *= std::forward<NumericB>(number);
+    return matrix;
+  }
+  for (size_t r = 0; r < matrix.Rows(); ++r) {
+    for (size_t c = 0; c < matrix.Cols(); ++c) {
+      matrix(r, c) *= number;
+    }
+  }
+  return matrix;
+}
+template <class NumericA, class NumericB>
+Matrix<NumericA> &operator/=(Matrix<NumericA> &matrix, NumericB &&number) {
+  if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+    matrix(0, 0) /= std::forward<NumericB>(number);
+    return matrix;
+  }
+  for (size_t r = 0; r < matrix.Rows(); ++r) {
+    for (size_t c = 0; c < matrix.Cols(); ++c) {
+      matrix(r, c) /= number;
+    }
+  }
+  return matrix;
+}
+
+template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+auto operator+(LMatrix &&first, RMatrix &&second) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RMatrix>::numeric_t;
+  using EndType = decltype(LType{} + RType{});
+  if constexpr (std::is_same_v<LType, EndType> &&
+                std::is_rvalue_reference_v<decltype(first)>) {
+    return std::move(first += std::forward<RMatrix>(second));
+  } else if constexpr (std::is_same_v<RType, EndType> &&
+                       std::is_rvalue_reference_v<decltype(second)>) {
+    return std::move(second += std::forward<LMatrix>(first));
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(first));
+    return std::move(copy += std::forward<RMatrix>(second));
+  }
+}
+template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+auto operator-(LMatrix &&first, RMatrix &&second) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RMatrix>::numeric_t;
+  using EndType = decltype(LType{} - RType{});
+  if constexpr (std::is_same_v<LType, EndType> &&
+                std::is_rvalue_reference_v<decltype(first)>) {
+    return std::move(first -= std::forward<RMatrix>(second));
+  } else if constexpr (std::is_same_v<RType, EndType> &&
+                       std::is_rvalue_reference_v<decltype(second)>) {
+    return std::move((first.RightCompoundSub(second), second));
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(first));
+    return std::move(copy -= std::forward<RMatrix>(second));
+  }
+}
+template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+auto operator*(LMatrix &&first, RMatrix &&second) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RMatrix>::numeric_t;
+  using EndType = decltype(LType{} * RType{});
+  if constexpr (std::is_same_v<LType, EndType> &&
+                std::is_rvalue_reference_v<decltype(first)>) {
+    return std::move(first *= std::forward<RMatrix>(second));
+  } else if constexpr (std::is_same_v<RType, EndType> &&
+                       std::is_rvalue_reference_v<decltype(second)>) {
+    return std::move((first.RightCompoundMult(second), second));
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(first));
+    return std::move(copy *= std::forward<RMatrix>(second));
+  }
+}
+
+template <OnlyMatrix LMatrix, class RNumeric>
+auto operator+(LMatrix &&matrix, RNumeric &&number) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RNumeric>;
+  using EndType = decltype(LType{} + RType{});
+  if constexpr (std::is_same_v<LType, EndType> &&
+                std::is_rvalue_reference_v<decltype(matrix)>) {
+    return std::move(matrix += number);
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(matrix));
+    return std::move(copy += std::forward<RNumeric>(number));
+  }
+}
+template <OnlyMatrix LMatrix, class RNumeric>
+auto operator-(LMatrix &&matrix, RNumeric &&number) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RNumeric>;
+  using EndType = decltype(LType{} - RType{});
+  if constexpr (std::is_same_v<LType, EndType> &&
+                std::is_rvalue_reference_v<decltype(matrix)>) {
+    return std::move(matrix -= number);
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(matrix));
+    return std::move(copy -= std::forward<RNumeric>(number));
+  }
+}
+template <OnlyMatrix LMatrix, class RNumeric>
+auto operator*(LMatrix &&matrix, RNumeric &&number) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RNumeric>;
+  using EndType = decltype(LType{} * RType{});
+  if constexpr (std::is_same_v<LType, EndType> &&
+                std::is_rvalue_reference_v<decltype(matrix)>) {
+    return std::move(matrix *= number);
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(matrix));
+    return std::move(copy *= std::forward<RNumeric>(number));
+  }
+}
+
+template <class LNumeric, OnlyMatrix RMatrix>
+auto operator+(LNumeric &&number, RMatrix &&matrix) {
+  return std::forward<RMatrix>(matrix) + std::forward<LNumeric>(number);
+}
+template <class LNumeric, OnlyMatrix RMatrix>
+auto operator-(LNumeric &&number, RMatrix &&matrix) {
+  using RType = typename std::decay_t<RMatrix>::numeric_t;
+  using EndType = decltype(LNumeric{} - RType{});
+  if constexpr (std::is_same_v<RType, EndType> &&
+                std::is_rvalue_reference_v<decltype(matrix)>) {
+    if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+      matrix(0, 0) = std::forward<LNumeric>(number) - std::move(matrix(0, 0));
+      return std::move(matrix);
+    }
+    for (size_t r = 0; r < matrix.Rows(); ++r) {
+      for (size_t c = 0; c < matrix.Rows(); ++c) {
+        matrix(r, c) = number - std::move(matrix(r, c));
+      }
+    }
+    return std::move(matrix);
+  }
+  Matrix<EndType> buffer;
+  if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+    buffer = Matrix<EndType>(1, 1);
+    buffer(0, 0) =
+        std::forward<LNumeric>(number) - std::forward<RMatrix>(matrix)(0, 0);
+    return std::move(buffer);
+  }
+  buffer = Matrix<EndType>(matrix.Rows(), matrix.Cols());
+  for (size_t r = 0; r < matrix.Rows(); ++r) {
+    for (size_t c = 0; c < matrix.Rows(); ++c) {
+      buffer(r, c) = number - std::forward<RMatrix>(matrix)(r, c);
+    }
+  }
+  return std::move(buffer);
+}
+template <class LNumeric, OnlyMatrix RMatrix>
+auto operator*(LNumeric &&number, RMatrix &&matrix) {
+  return std::forward<RMatrix>(matrix) * std::forward<LNumeric>(number);
 }
