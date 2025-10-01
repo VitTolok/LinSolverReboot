@@ -1,11 +1,12 @@
+#pragma once
 #include <stdexcept>
 
 class MachineError : public std::exception {
-public:
+ public:
   [[nodiscard]] const char *what() const noexcept override {
     return message_.c_str();
   }
 
-private:
+ private:
   std::string message_ = "Unknown Machine Error";
 };

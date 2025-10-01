@@ -22,4 +22,3 @@ target_include_directories(handtest PRIVATE
   ${CMAKE_SOURCE_DIR}/include/numeric
   ${CMAKE_SOURCE_DIR}/include/solvercore
 )
-target_link_libraries(handtest PRIVATE rational)

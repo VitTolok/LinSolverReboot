@@ -1,3 +1,4 @@
+#pragma once
 #include "definitions.hpp"
 #include <cstdint>
 #include <iostream>
@@ -24,6 +25,7 @@ public:
 
   friend Rational operator+(const Rational &, const Rational &);
   friend Rational operator-(const Rational &, const Rational &);
+  friend Rational operator-(const Rational &);
   friend Rational operator*(const Rational &, const Rational &);
   friend Rational operator/(const Rational &, const Rational &);
 
