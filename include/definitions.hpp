@@ -1,12 +1,25 @@
 #pragma once
+#include <memory>
 #include <stdexcept>
 
 class MachineError : public std::exception {
  public:
-  [[nodiscard]] const char *what() const noexcept override {
-    return message_.c_str();
+  MachineError() : message_ptr(message_) {
   }
 
+  [[nodiscard]] const char *what() const noexcept final {
+    return message_ptr;
+  }
+
+  virtual std::unique_ptr<MachineError> Detach() {
+    return std::make_unique<MachineError>(std::move<MachineError &>(*this));
+  }
+
+  virtual ~MachineError() = default;
+
+ protected:
+  const char *message_ptr;
+
  private:
-  std::string message_ = "Unknown Machine Error";
+  inline static constexpr const char message_[] = "Unknown Machine Error";
 };

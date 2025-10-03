@@ -1,20 +1,24 @@
 #pragma once
-#include "matrix.hpp"
 #include <optional>
 
-template <class Numeric> struct Decompose {
+#include "matrix.hpp"
+
+template <class Numeric>
+struct Decompose {
   Matrix<Numeric> simple;
   std::optional<Numeric> det;
   std::optional<Matrix<Numeric>> upper;
   std::optional<Matrix<Numeric>> lower;
 
-  Decompose() : simple(), det(), upper(), lower() {}
+  Decompose() : simple(), det(), upper(), lower() {
+  }
 
-  explicit Decompose(const Matrix<Numeric> &matrix) : simple(matrix) {
+  template <class Progress = int>
+  explicit Decompose(Matrix<Numeric> matrix, Progress *progress = nullptr) : simple(std::move(matrix)) {
     if (simple.Rows() == simple.Cols()) {
       det = Numeric(1);
       upper = simple;
-      lower = Matrix<Numeric>::Eye(Numeric(1), simple.Rows());
+      lower = Matrix<Numeric>::Eye(simple.Rows());
     } else {
       det.reset();
       upper.reset();
@@ -53,8 +57,7 @@ template <class Numeric> struct Decompose {
         }
         if (row > cur_row) {
           if (upper.has_value()) {
-            (*upper).AddRow(cur_row, row,
-                            -simple(row, col) / (*upper)(cur_row, col));
+            (*upper).AddRow(cur_row, row, -simple(row, col) / (*upper)(cur_row, col));
           }
           if (lower.has_value()) {
             (*lower)(row, col) = simple(row, col) / (*upper)(cur_row, col);
@@ -63,6 +66,9 @@ template <class Numeric> struct Decompose {
         simple.AddRow(cur_row, row, -simple(row, col));
       }
       cur_row++;
+      if (progress != nullptr) {
+        *progress = cur_row * 100 / simple.Rows();
+      }
     }
   }
 };
