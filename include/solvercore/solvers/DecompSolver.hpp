@@ -29,7 +29,7 @@ struct DecompSolution : public Solution {
     lower = decomp.lower.has_value() ? (std::ostringstream() << *decomp.lower).str() : "DNE";
     upper = decomp.upper.has_value() ? (std::ostringstream() << *decomp.upper).str() : "DNE";
   }
-  virtual std::unique_ptr<Solution> Detatch() override {
+  virtual std::unique_ptr<Solution> Detach() override {
     return std::make_unique<DecompSolution>(std::move(*this));
   }
   virtual ~DecompSolution() override = default;

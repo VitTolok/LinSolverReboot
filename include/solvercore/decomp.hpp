@@ -1,6 +1,6 @@
 #pragma once
-#include "matrix.hpp"
 #include <optional>
+#include "matrix.hpp"
 
 template <class Numeric>
 struct Decompose {
@@ -12,12 +12,12 @@ struct Decompose {
   Decompose() : simple(), det(), upper(), lower() {
   }
 
-  template <class Progress = int32_t>
-  explicit Decompose(const Matrix<Numeric> &matrix, Progress *progress = nullptr) : simple(matrix) {
+  template <class Progress = int>
+  explicit Decompose(Matrix<Numeric> matrix, Progress *progress = nullptr) : simple(std::move(matrix)) {
     if (simple.Rows() == simple.Cols()) {
       det = Numeric(1);
       upper = simple;
-      lower = Matrix<Numeric>::Eye(Numeric(1), simple.Rows());
+      lower = Matrix<Numeric>::Eye(simple.Rows());
     } else {
       det.reset();
       upper.reset();

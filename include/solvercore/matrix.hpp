@@ -1,208 +1,444 @@
 #pragma once
-#include "definitions.hpp"
 #include <iostream>
 #include <sstream>
 #include <vector>
 
-class MatrixOutOfRange : public MachineError {
-public:
-  MatrixOutOfRange(size_t range, size_t reference) {
-    message_ =
-        (std::ostringstream() << "Matrix has " << range << " range but element "
-                              << reference << " was referenced")
-            .str();
+#include "definitions.hpp"
+
+class MatrixOutOfRange final : public MachineError {
+ public:
+  MatrixOutOfRange(size_t range, const std::string &parameter, size_t reference) {
+    message_ = (std::ostringstream() << "Matrix has " << range << ' ' << parameter << ", but element " << reference
+                                     << " was referenced")
+                   .str();
+    message_ptr = message_.c_str();
   }
 
-  [[nodiscard]] const char *what() const noexcept override {
-    return message_.c_str();
+  std::unique_ptr<MachineError> Detach() final {
+    return std::make_unique<MatrixOutOfRange>(std::move(*this));
   }
 
-private:
+  ~MatrixOutOfRange() final = default;
+
+ private:
   std::string message_;
 };
 
-class InvalidMatrixBase : public MachineError {
-private:
-  std::string message_ = "Vector used for Matrix construction is invalid";
+class InvalidMatrixBase final : public MachineError {
+ public:
+  InvalidMatrixBase() {
+    message_ptr = message_;
+  }
+  ~InvalidMatrixBase() final = default;
+
+ private:
+  inline static constexpr const char message_[] = "std::vector used for Matrix construction is invalid";
 };
 
-class InvalidMatrixString : public MachineError {
-private:
-  std::string message_ = "String used for Matrix construction is invalid";
+class InvalidMatrixOperation final : public MachineError {
+ public:
+  InvalidMatrixOperation() {
+    message_ptr = message_;
+  }
+  ~InvalidMatrixOperation() final = default;
+
+ private:
+  inline static constexpr const char message_[] = "The requested operation cannot be performed on provided matrixes";
 };
 
-template <class Numeric> class Matrix {
-public:
-  Matrix() : contents_(), rows_(0), cols_(0) {}
+class InvalidMatrixString final : public MachineError {
+ public:
+  InvalidMatrixString() {
+    message_ptr = message_;
+  }
+  ~InvalidMatrixString() final = default;
 
-  Matrix(size_t rows, size_t cols) {
-    contents_ = std::vector(rows, std::vector(cols, Numeric(0)));
-    rows_ = rows;
-    cols_ = cols;
+ private:
+  inline static constexpr const char message_[] = "String used for Matrix construction is invalid";
+};
+
+template <class Numeric>
+class Matrix;
+
+template <class T>
+concept OnlyMatrix = std::same_as<Matrix<typename std::decay_t<T>::numeric_t>, std::decay_t<T>>;
+
+template <class Numeric>
+class Matrix {
+ public:
+  Matrix() : contents_() {
   }
 
-  explicit Matrix(std::vector<std::vector<Numeric>> &&cont)
-      : contents_(std::move(cont)) {
-    rows_ = contents_.size();
-    if (rows_ > 0) {
-      cols_ = contents_[0].size();
-    } else {
-      cols_ = 0;
-    }
-    ContentsValidityCheck();
-  }
-  explicit Matrix(const std::vector<std::vector<Numeric>> &cont)
-      : contents_(cont) {
-    rows_ = contents_.size();
-    if (rows_ > 0) {
-      cols_ = contents_[0].size();
-    } else {
-      cols_ = 0;
-    }
-    ContentsValidityCheck();
+  using numeric_t = Numeric;
+
+  template <class SomeNumeric>
+  inline Matrix(size_t rows, size_t cols, SomeNumeric &&value);
+  inline Matrix(size_t rows, size_t cols);
+
+  template <class SomeNumeric>
+  explicit inline Matrix(const std::vector<std::vector<SomeNumeric>> &cont);
+  template <class SomeNumeric>
+  explicit inline Matrix(std::vector<std::vector<SomeNumeric>> &&cont);
+  explicit inline Matrix(std::vector<std::vector<Numeric>> &&cont);
+  explicit inline Matrix(const std::vector<std::vector<Numeric>> &cont);
+
+  Matrix(Matrix<Numeric> &&) noexcept = default;
+  Matrix(const Matrix<Numeric> &) = default;
+
+  template <OnlyMatrix OtherMatrix>
+  explicit inline Matrix(OtherMatrix &&other);
+
+  static inline Matrix<Numeric> Eye(size_t size);
+  template <class SomeNumeric>
+  static inline Matrix<Numeric> Eye(size_t size, SomeNumeric &&value);
+  template <class SomeNumericA, class SomeNumericB>
+  static inline Matrix<Numeric> Eye(size_t size, SomeNumericA &&value, SomeNumericB &&zero_override);
+
+  Matrix<Numeric> &operator=(const Matrix<Numeric> &) = default;
+  Matrix<Numeric> &operator=(Matrix<Numeric> &&) noexcept = default;
+
+  inline void SwapRows(size_t row1, size_t row2) noexcept;
+  inline void SwapCols(size_t col1, size_t col2) noexcept;
+
+  template <class SomeNumeric>
+  inline void AddRow(size_t source, size_t target,
+                     SomeNumeric &&mult) noexcept(noexcept(std::declval<Numeric &>() += std::declval<Numeric>()) &&
+                                                  noexcept(std::declval<Numeric>() *
+                                                           std::declval<std::decay_t<SomeNumeric>>()));
+  template <class SomeNumeric>
+  inline void AddCol(size_t source, size_t target,
+                     SomeNumeric &&mult) noexcept(noexcept(std::declval<Numeric &>() += std::declval<Numeric>()) &&
+                                                  noexcept(std::declval<Numeric>() *
+                                                           std::declval<std::decay_t<SomeNumeric>>()));
+  inline void AddRow(size_t source,
+                     size_t target) noexcept(noexcept(std::declval<Numeric &>() += std::declval<Numeric>()));
+  inline void AddCol(size_t source,
+                     size_t target) noexcept(noexcept(std::declval<Numeric &>() += std::declval<Numeric>()));
+
+  template <class SomeNumeric>
+  inline void MultRow(size_t row, SomeNumeric &&mult) noexcept(noexcept(std::declval<Numeric &>() *=
+                                                                        std::declval<std::decay_t<SomeNumeric>>()));
+  template <class SomeNumeric>
+  inline void MultCol(size_t col, SomeNumeric &&mult) noexcept(noexcept(std::declval<Numeric &>() *=
+                                                                        std::declval<std::decay_t<SomeNumeric>>()));
+
+  inline Numeric &operator()(size_t row, size_t col) noexcept;
+  inline const Numeric &operator()(size_t row, size_t col) const noexcept;
+
+  inline Numeric &At(size_t row, size_t col);
+  inline const Numeric &At(size_t row, size_t col) const;
+
+  inline size_t Rows() const noexcept;
+  inline size_t Cols() const noexcept;
+
+  bool Empty() const noexcept {
+    return contents_.empty();
   }
 
-  Matrix(Matrix<Numeric> &&source) noexcept {
-    contents_ = std::move(source.contents_);
-    rows_ = source.rows_;
-    cols_ = source.cols_;
-    source = Matrix();
-  }
+  template <class NumericA, OnlyMatrix OtherMatrix>
+  friend inline Matrix<NumericA> &operator+=(Matrix<NumericA> &, OtherMatrix &&);
+  template <class NumericA, OnlyMatrix OtherMatrix>
+  friend inline Matrix<NumericA> &operator-=(Matrix<NumericA> &, OtherMatrix &&);
+  template <class NumericA, OnlyMatrix OtherMatrix>
+  friend inline Matrix<NumericA> &operator*=(Matrix<NumericA> &, OtherMatrix &&);
 
-  Matrix(const Matrix<Numeric> &source) {
-    contents_ = source.contents_;
-    rows_ = source.rows_;
-    cols_ = source.cols_;
-  }
+  template <class NumericA, class NumericB>
+  friend inline Matrix<NumericA> &operator+=(Matrix<NumericA> &,
+                                             NumericB &&) noexcept(noexcept(std::declval<NumericA &>() +=
+                                                                            std::declval<std::decay_t<NumericB>>()));
+  template <class NumericA, class NumericB>
+  friend inline Matrix<NumericA> &operator-=(Matrix<NumericA> &,
+                                             NumericB &&) noexcept(noexcept(std::declval<NumericA &>() -=
+                                                                            std::declval<std::decay_t<NumericB>>()));
+  template <class NumericA, class NumericB>
+  friend inline Matrix<NumericA> &operator*=(Matrix<NumericA> &,
+                                             NumericB &&) noexcept(noexcept(std::declval<NumericA &>() *=
+                                                                            std::declval<std::decay_t<NumericB>>()));
+  template <class NumericA, class NumericB>
+  friend inline Matrix<NumericA> &operator/=(Matrix<NumericA> &,
+                                             NumericB &&) noexcept(noexcept(std::declval<NumericA &>() /=
+                                                                            std::declval<std::decay_t<NumericB>>()));
 
-  static Matrix<Numeric> Eye(const Numeric &value, size_t size) {
-    Matrix<Numeric> identity(size, size);
-    for (size_t i = 0; i < size; i++) {
-      identity.contents_[i][i] = value;
-    }
-    return identity;
-  }
+  template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+  friend inline auto operator+(LMatrix &&, RMatrix &&);
+  template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+  friend inline auto operator-(LMatrix &&, RMatrix &&);
+  template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+  friend inline auto operator*(LMatrix &&, RMatrix &&);
 
-  Matrix<Numeric> &operator=(const Matrix<Numeric> &other) {
-    contents_ = other.contents_;
-    rows_ = contents_.size();
-    if (!contents_.empty()) {
-      cols_ = contents_[0].size();
-    }
-    return *this;
-  }
-  Matrix<Numeric> &operator=(Matrix<Numeric> &&other) noexcept {
-    contents_ = std::move(other.contents_);
-    rows_ = contents_.size();
-    if (!contents_.empty()) {
-      cols_ = contents_[0].size();
-    }
-    other.rows_ = 0;
-    other.cols_ = 0;
-    return *this;
-  }
+  template <class LNumeric, class RNumeric>
+  friend inline bool operator==(const Matrix<LNumeric> &,
+                                const Matrix<RNumeric> &) noexcept(noexcept(std::declval<const LNumeric &>() !=
+                                                                            std::declval<const RNumeric &>()));
+  template <class LNumeric, class RNumeric>
+  friend inline bool operator!=(const Matrix<LNumeric> &lhs,
+                                const Matrix<RNumeric> &rhs) noexcept(noexcept(lhs == rhs));
 
-  void SwapRows(size_t row1, size_t row2) {
-    if (row1 >= rows_ || row2 >= rows_) {
-      throw MatrixOutOfRange(rows_, std::max(row1, row2));
-    }
-    contents_[row1].swap(contents_[row2]);
-  }
-
-  void AddRow(size_t source, size_t target, const Numeric &mult) {
-    if (source >= rows_ || target >= rows_) {
-      throw MatrixOutOfRange(rows_, std::max(source, target));
-    }
-    for (size_t col = 0; col < cols_; col++) {
-      contents_[target][col] += contents_[source][col] * mult;
-    }
-  }
-
-  void MultRow(size_t row, Numeric mult) {
-    if (row >= rows_) {
-      throw MatrixOutOfRange(rows_, row);
-    }
-    for (size_t col = 0; col < cols_; col++) {
-      contents_[row][col] *= mult;
-    }
-  }
-
-  void SwapCols(size_t col1, size_t col2) {
-    if (col1 >= cols_ || col2 >= cols_) {
-      throw MatrixOutOfRange(cols_, std::max(col1, col2));
-    }
-    for (size_t row = 0; row < rows_; row++) {
-      std::swap(contents_[row][col1], contents_[row][col2]);
-    }
-  }
-
-  void AddCol(size_t source, size_t target, const Numeric &mult) {
-    if (source >= cols_ || target >= cols_) {
-      throw MatrixOutOfRange(cols_, std::max(source, target));
-    }
-    for (size_t row = 0; row < rows_; row++) {
-      contents_[row][target] += contents_[row][source] * mult;
-    }
-  }
-
-  void MultCol(size_t col, const Numeric &mult) {
-    if (col >= cols_) {
-      throw MatrixOutOfRange(cols_, col);
-    }
-    for (size_t row = 0; row < rows_; row++) {
-      contents_[row][col] *= mult;
-    }
-  }
-
-  Numeric &operator()(size_t row, size_t col) {
-    if (row >= rows_) {
-      throw MatrixOutOfRange(rows_, row);
-    }
-    if (col >= cols_) {
-      throw MatrixOutOfRange(cols_, col);
-    }
-    return contents_[row][col];
-  }
-  const Numeric &operator()(size_t row, size_t col) const {
-    if (row >= rows_) {
-      throw MatrixOutOfRange(rows_, row);
-    }
-    if (col >= cols_) {
-      throw MatrixOutOfRange(cols_, col);
-    }
-    return contents_[row][col];
-  }
-
-  size_t Rows() const noexcept { return rows_; }
-  size_t Cols() const noexcept { return cols_; }
-
-  bool Empty() const noexcept { return rows_ == 0; }
-
-private:
+ private:
   std::vector<std::vector<Numeric>> contents_;
-  size_t rows_;
-  size_t cols_;
 
   void ContentsValidityCheck() {
-    if (rows_ == 0) {
+    if (contents_.empty()) {
       return;
     }
     for (const auto &row : contents_) {
-      if (row.size() != cols_) {
+      if (row.size() != contents_.front().size()) {
+        contents_.clear();
         throw InvalidMatrixBase();
+      }
+    }
+    if (contents_.front().empty()) {
+      contents_.clear();
+    }
+  }
+
+  template <class OtherNumeric>
+  void RightCompoundSub(Matrix<OtherNumeric> &other) const {
+    if (other.Rows() != Rows() || other.Cols() != Cols()) {
+      throw InvalidMatrixOperation{};
+    }
+    for (size_t r = 0; r < Rows(); ++r) {
+      for (size_t c = 0; c < Cols(); ++c) {
+        other(r, c) = ((*this)(r, c)) - std::move(other(r, c));
+      }
+    }
+  }
+  template <class OtherNumeric>
+  void RightCompoundMult(Matrix<OtherNumeric> &other) const {
+    if (other.Rows() != Cols()) {
+      throw InvalidMatrixOperation{};
+    }
+    std::vector<OtherNumeric> buffer;
+    for (size_t c = 0; c < other.Cols(); ++c) {
+      buffer.resize(Rows(), Numeric(0));
+      for (size_t r = 0; r < Rows(); ++r) {
+        buffer[r] = Numeric(0);
+        for (size_t k = 0; k < Cols(); ++k) {
+          buffer[r] += (((*this)(r, k)) * other(k, c));
+        }
+      }
+      for (size_t r = 0; r < Rows(); ++r) {
+        other(r, c) = std::move(buffer[r]);
       }
     }
   }
 };
 
 template <class Numeric>
+inline Matrix<Numeric>::Matrix(size_t rows, size_t cols) : contents_(rows, std::vector<Numeric>(cols, Numeric(0))) {
+}
+
+template <class Numeric>
+template <class SomeNumeric>
+inline Matrix<Numeric>::Matrix(size_t rows, size_t cols, SomeNumeric &&value)
+    : contents_(rows, std::vector<Numeric>(cols, Numeric(std::forward<SomeNumeric>(value)))) {
+}
+
+template <class Numeric>
+inline Matrix<Numeric>::Matrix(std::vector<std::vector<Numeric>> &&cont) : contents_(std::move(cont)) {
+  ContentsValidityCheck();
+}
+
+template <class Numeric>
+inline Matrix<Numeric>::Matrix(const std::vector<std::vector<Numeric>> &cont) : contents_(cont) {
+}
+
+template <class Numeric>
+template <class SomeNumeric>
+inline Matrix<Numeric>::Matrix(const std::vector<std::vector<SomeNumeric>> &cont)
+    : Matrix(cont.size(), cont.empty() ? 0 : cont.front().size()) {
+  for (size_t r = 0; r < Rows(); ++r) {
+    for (size_t c = 0; c < Cols(); ++c) {
+      contents_[r][c] = cont[r][c];
+    }
+  }
+}
+
+template <class Numeric>
+template <class SomeNumeric>
+inline Matrix<Numeric>::Matrix(std::vector<std::vector<SomeNumeric>> &&cont) {
+  Matrix<SomeNumeric> placeholder(std::move(cont));
+  *this = std::move(placeholder);
+}
+
+template <class Numeric>
+template <OnlyMatrix OtherMatrix>
+inline Matrix<Numeric>::Matrix(OtherMatrix &&other) : Matrix(other.Rows(), other.Cols()) {
+  for (size_t r = 0; r < Rows(); ++r) {
+    for (size_t c = 0; c < Cols(); ++c) {
+      contents_[r][c] = std::forward<OtherMatrix>(other)(r, c);
+    }
+  }
+}
+
+template <class Numeric>
+inline Matrix<Numeric> Matrix<Numeric>::Eye(size_t size) {
+  return Eye(size, Numeric(1), Numeric(0));
+}
+
+template <class Numeric>
+template <class SomeNumeric>
+inline Matrix<Numeric> Matrix<Numeric>::Eye(size_t size, SomeNumeric &&value) {
+  return Eye(size, value, Numeric(0));
+}
+
+template <class Numeric>
+template <class SomeNumericA, class SomeNumericB>
+inline Matrix<Numeric> Matrix<Numeric>::Eye(size_t size, SomeNumericA &&value, SomeNumericB &&zero_override) {
+  Matrix<Numeric> eye(size, size, std::forward<SomeNumericB>(zero_override));
+  for (size_t i = 0; i < size; ++i) {
+    if constexpr (std::is_rvalue_reference_v<decltype(value)>) {
+      if (i + 1 == size) {
+        eye(i, i) = std::move(value);
+        break;
+      }
+    }
+    eye(i, i) = value;
+  }
+  return std::move(eye);
+}
+
+template <class Numeric>
+inline void Matrix<Numeric>::SwapRows(size_t row1, size_t row2) noexcept {
+  contents_[row1].swap(contents_[row2]);
+}
+template <class Numeric>
+inline void Matrix<Numeric>::SwapCols(size_t col1, size_t col2) noexcept {
+  for (auto &row : contents_) {
+    std::swap(row[col1], row[col2]);
+  }
+}
+
+template <class Numeric>
+template <class SomeNumeric>
+inline void Matrix<Numeric>::AddRow(size_t source, size_t target, SomeNumeric &&mult) noexcept(
+    noexcept(std::declval<Numeric &>() += std::declval<Numeric>()) &&
+    noexcept(std::declval<Numeric>() * std::declval<std::decay_t<SomeNumeric>>())) {
+  for (size_t c = 0; c + 1 < Cols(); ++c) {
+    contents_[target][c] += contents_[source][c] * mult;
+  }
+  if (Cols() > 0) {
+    if constexpr (std::is_rvalue_reference_v<decltype(mult)>) {
+      contents_[target].back() += contents_[source].back() * std::move(mult);
+    } else {
+      contents_[target].back() += contents_[source].back() * mult;
+    }
+  }
+}
+template <class Numeric>
+template <class SomeNumeric>
+inline void Matrix<Numeric>::AddCol(size_t source, size_t target, SomeNumeric &&mult) noexcept(
+    noexcept(std::declval<Numeric &>() += std::declval<Numeric>()) &&
+    noexcept(std::declval<Numeric>() * std::declval<std::decay_t<SomeNumeric>>())) {
+  for (size_t r = 0; r + 1 < Rows(); ++r) {
+    contents_[r][target] += contents_[r][source] * mult;
+  }
+  if (Cols() > 0) {
+    if constexpr (std::is_rvalue_reference_v<decltype(mult)>) {
+      contents_.back()[target] += contents_.back()[source] * std::move(mult);
+    } else {
+      contents_.back()[target] += contents_.back()[source] * mult;
+    }
+  }
+}
+template <class Numeric>
+inline void Matrix<Numeric>::AddRow(size_t source, size_t target) noexcept(noexcept(std::declval<Numeric &>() +=
+                                                                                    std::declval<Numeric>())) {
+  for (size_t c = 0; c < Cols(); ++c) {
+    contents_[target][c] += contents_[source][c];
+  }
+}
+template <class Numeric>
+inline void Matrix<Numeric>::AddCol(size_t source, size_t target) noexcept(noexcept(std::declval<Numeric &>() +=
+                                                                                    std::declval<Numeric>())) {
+  for (size_t r = 0; r < Rows(); ++r) {
+    contents_[r][target] += contents_[r][source];
+  }
+}
+
+template <class Numeric>
+template <class SomeNumeric>
+inline void Matrix<Numeric>::MultRow(size_t row,
+                                     SomeNumeric &&mult) noexcept(noexcept(std::declval<Numeric &>() *=
+                                                                           std::declval<std::decay_t<SomeNumeric>>())) {
+  if constexpr (std::is_rvalue_reference_v<decltype(mult)>) {
+    for (size_t c = 0; c + 1 < Cols(); ++c) {
+      contents_[row][c] *= mult;
+    }
+    contents_[row].back() *= std::move(mult);
+  } else {
+    for (size_t c = 0; c < Cols(); ++c) {
+      contents_[row][c] *= mult;
+    }
+  }
+}
+template <class Numeric>
+template <class SomeNumeric>
+inline void Matrix<Numeric>::MultCol(size_t col,
+                                     SomeNumeric &&mult) noexcept(noexcept(std::declval<Numeric &>() *=
+                                                                           std::declval<std::decay_t<SomeNumeric>>())) {
+  if constexpr (std::is_rvalue_reference_v<decltype(mult)>) {
+    for (size_t r = 0; r + 1 < Rows(); ++r) {
+      contents_[r][col] *= mult;
+    }
+    if (Rows() > 0) {
+      contents_.back()[col] *= std::move(mult);
+    }
+  } else {
+    for (size_t r = 0; r < Rows(); ++r) {
+      contents_[r][col] *= mult;
+    }
+  }
+}
+
+template <class Numeric>
+inline Numeric &Matrix<Numeric>::operator()(size_t row, size_t col) noexcept {
+  return contents_[row][col];
+}
+template <class Numeric>
+inline const Numeric &Matrix<Numeric>::operator()(size_t row, size_t col) const noexcept {
+  return contents_[row][col];
+}
+
+template <class Numeric>
+inline Numeric &Matrix<Numeric>::At(size_t row, size_t col) {
+  if (row >= Rows()) {
+    throw MatrixOutOfRange(Rows(), "rows", row);
+  }
+  if (col >= Cols()) {
+    throw MatrixOutOfRange(Cols(), "columns", col);
+  }
+  return contents_[row][col];
+}
+template <class Numeric>
+inline const Numeric &Matrix<Numeric>::At(size_t row, size_t col) const {
+  if (row >= Rows()) {
+    throw MatrixOutOfRange(Rows(), "rows", row);
+  }
+  if (col >= Cols()) {
+    throw MatrixOutOfRange(Cols(), "columns", col);
+  }
+  return contents_[row][col];
+}
+
+template <class Numeric>
+inline size_t Matrix<Numeric>::Rows() const noexcept {
+  return contents_.size();
+}
+template <class Numeric>
+inline size_t Matrix<Numeric>::Cols() const noexcept {
+  return contents_.empty() ? 0 : contents_.front().size();
+}
+
+template <class Numeric>
 std::ostream &operator<<(std::ostream &out, const Matrix<Numeric> &matrix) {
-  std::vector<size_t> lengths(matrix.Cols());
+  if (matrix.Empty()) {
+    return out;
+  }
+  std::vector<size_t> lengths(matrix.Cols(), 0);
   for (size_t col = 0; col < matrix.Cols(); col++) {
     for (size_t row = 0; row < matrix.Rows(); row++) {
-      lengths[col] =
-          std::max(lengths[col],
-                   (std::ostringstream() << matrix(row, col)).str().size());
+      lengths[col] = std::max(lengths[col], (std::ostringstream() << matrix(row, col)).str().size());
     }
   }
   for (size_t row = 0; row < matrix.Rows(); ++row) {
@@ -215,11 +451,7 @@ std::ostream &operator<<(std::ostream &out, const Matrix<Numeric> &matrix) {
     }
     for (size_t col = 0; col < matrix.Cols(); ++col) {
       out << matrix(row, col)
-          << std::string(
-                 lengths[col] -
-                     (std::ostringstream() << matrix(row, col)).str().size() +
-                     1,
-                 ' ');
+          << std::string(lengths[col] - (std::ostringstream() << matrix(row, col)).str().size() + 1, ' ');
     }
     if (row + 1 == matrix.Rows()) {
       out << "/\n";
@@ -309,4 +541,268 @@ std::istream &operator>>(std::istream &in, Matrix<Numeric> &matrix) {
     throw InvalidMatrixString();
   }
   return in;
+}
+
+template <class Numeric, OnlyMatrix OtherMatrix>
+inline Matrix<Numeric> &operator+=(Matrix<Numeric> &self, OtherMatrix &&other) {
+  if (self.Rows() != other.Rows() || self.Cols() != other.Cols()) {
+    throw InvalidMatrixOperation{};
+  }
+  for (size_t i = 0; i < self.Rows(); ++i) {
+    for (size_t j = 0; j < self.Cols(); ++j) {
+      self(i, j) += std::forward<OtherMatrix>(other)(i, j);
+    }
+  }
+  return self;
+}
+template <class Numeric, OnlyMatrix OtherMatrix>
+inline Matrix<Numeric> &operator-=(Matrix<Numeric> &self, OtherMatrix &&other) {
+  if (self.Rows() != other.Rows() || self.Cols() != other.Cols()) {
+    throw InvalidMatrixOperation{};
+  }
+  for (size_t i = 0; i < self.Rows(); ++i) {
+    for (size_t j = 0; j < self.Cols(); ++j) {
+      self(i, j) -= std::forward<OtherMatrix>(other)(i, j);
+    }
+  }
+  return self;
+}
+template <class Numeric, OnlyMatrix OtherMatrix>
+inline Matrix<Numeric> &operator*=(Matrix<Numeric> &self, OtherMatrix &&other) {
+  if (self.Cols() != other.Rows()) {
+    throw InvalidMatrixOperation{};
+  }
+  if constexpr (std::is_same_v<typename std::decay_t<OtherMatrix>::numeric_t, Numeric>) {
+    if (&self == &other) {
+      return self = self * other;
+    }
+  }
+  std::vector<Numeric> buffer(other.Cols(), Numeric(0));
+  for (size_t r = 0; r < self.Rows(); ++r) {
+    buffer.resize(other.Cols(), Numeric(0));
+    for (size_t c = 0; c < other.Cols(); ++c) {
+      buffer[c] = Numeric(0);
+      for (size_t k = 0; k < self.Cols(); ++k) {
+        buffer[c] += self(r, k) * std::forward<OtherMatrix>(other)(k, c);
+      }
+    }
+    buffer.swap(self.contents_[r]);
+  }
+  return self;
+}
+
+template <class NumericA, class NumericB>
+inline Matrix<NumericA> &operator+=(Matrix<NumericA> &matrix,
+                                    NumericB &&number) noexcept(noexcept(std::declval<NumericA &>() +=
+                                                                         std::declval<std::decay_t<NumericB>>())) {
+  if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+    matrix(0, 0) += std::forward<NumericB>(number);
+    return matrix;
+  }
+  for (size_t r = 0; r < matrix.Rows(); ++r) {
+    for (size_t c = 0; c < matrix.Cols(); ++c) {
+      matrix(r, c) += number;
+    }
+  }
+  return matrix;
+}
+template <class NumericA, class NumericB>
+inline Matrix<NumericA> &operator-=(Matrix<NumericA> &matrix,
+                                    NumericB &&number) noexcept(noexcept(std::declval<NumericA &>() -=
+                                                                         std::declval<std::decay_t<NumericB>>())) {
+  if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+    matrix(0, 0) -= std::forward<NumericB>(number);
+    return matrix;
+  }
+  for (size_t r = 0; r < matrix.Rows(); ++r) {
+    for (size_t c = 0; c < matrix.Cols(); ++c) {
+      matrix(r, c) -= number;
+    }
+  }
+  return matrix;
+}
+template <class NumericA, class NumericB>
+inline Matrix<NumericA> &operator*=(Matrix<NumericA> &matrix,
+                                    NumericB &&number) noexcept(noexcept(std::declval<NumericA &>() *=
+                                                                         std::declval<std::decay_t<NumericB>>())) {
+  if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+    matrix(0, 0) *= std::forward<NumericB>(number);
+    return matrix;
+  }
+  for (size_t r = 0; r < matrix.Rows(); ++r) {
+    for (size_t c = 0; c < matrix.Cols(); ++c) {
+      matrix(r, c) *= number;
+    }
+  }
+  return matrix;
+}
+template <class NumericA, class NumericB>
+inline Matrix<NumericA> &operator/=(Matrix<NumericA> &matrix,
+                                    NumericB &&number) noexcept(noexcept(std::declval<NumericA &>() /=
+                                                                         std::declval<std::decay_t<NumericB>>())) {
+  if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+    matrix(0, 0) /= std::forward<NumericB>(number);
+    return matrix;
+  }
+  for (size_t r = 0; r < matrix.Rows(); ++r) {
+    for (size_t c = 0; c < matrix.Cols(); ++c) {
+      matrix(r, c) /= number;
+    }
+  }
+  return matrix;
+}
+
+template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+inline auto operator+(LMatrix &&first, RMatrix &&second) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RMatrix>::numeric_t;
+  using EndType = decltype(LType{} + RType{});
+  if constexpr (std::is_same_v<LType, EndType> && std::is_rvalue_reference_v<decltype(first)>) {
+    return std::move(first += std::forward<RMatrix>(second));
+  } else if constexpr (std::is_same_v<RType, EndType> && std::is_rvalue_reference_v<decltype(second)>) {
+    return std::move(second += std::forward<LMatrix>(first));
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(first));
+    return std::move(copy += std::forward<RMatrix>(second));
+  }
+}
+template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+inline auto operator-(LMatrix &&first, RMatrix &&second) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RMatrix>::numeric_t;
+  using EndType = decltype(LType{} - RType{});
+  if constexpr (std::is_same_v<LType, EndType> && std::is_rvalue_reference_v<decltype(first)>) {
+    return std::move(first -= std::forward<RMatrix>(second));
+  } else if constexpr (std::is_same_v<RType, EndType> && std::is_rvalue_reference_v<decltype(second)>) {
+    return std::move((first.RightCompoundSub(second), second));
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(first));
+    return std::move(copy -= std::forward<RMatrix>(second));
+  }
+}
+template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+inline auto operator*(LMatrix &&first, RMatrix &&second) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RMatrix>::numeric_t;
+  using EndType = decltype(LType{} * RType{});
+  if constexpr (std::is_same_v<LType, EndType> && std::is_rvalue_reference_v<decltype(first)>) {
+    return std::move(first *= std::forward<RMatrix>(second));
+  } else if constexpr (std::is_same_v<RType, EndType> && std::is_rvalue_reference_v<decltype(second)>) {
+    return std::move((first.RightCompoundMult(second), second));
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(first));
+    return std::move(copy *= std::forward<RMatrix>(second));
+  }
+}
+
+template <OnlyMatrix LMatrix, class RNumeric>
+inline auto operator+(LMatrix &&matrix, RNumeric &&number) noexcept(
+    std::is_same_v<typename std::decay_t<LMatrix>::numeric_t,
+                   decltype((typename std::decay_t<LMatrix>::numeric_t){} * (typename std::decay_t<RNumeric>){})> &&
+    std::is_rvalue_reference_v<decltype(matrix)> && noexcept(matrix += std::declval<decltype(number)>())) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RNumeric>;
+  using EndType = decltype(LType{} + RType{});
+  if constexpr (std::is_same_v<LType, EndType> && std::is_rvalue_reference_v<decltype(matrix)>) {
+    return std::move(matrix += std::forward<RNumeric>(number));
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(matrix));
+    return std::move(copy += std::forward<RNumeric>(number));
+  }
+}
+template <OnlyMatrix LMatrix, class RNumeric>
+inline auto operator-(LMatrix &&matrix, RNumeric &&number) noexcept(
+    std::is_same_v<typename std::decay_t<LMatrix>::numeric_t,
+                   decltype((typename std::decay_t<LMatrix>::numeric_t){} * (typename std::decay_t<RNumeric>){})> &&
+    std::is_rvalue_reference_v<decltype(matrix)> && noexcept(matrix -= std::declval<decltype(number)>())) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RNumeric>;
+  using EndType = decltype(LType{} - RType{});
+  if constexpr (std::is_same_v<LType, EndType> && std::is_rvalue_reference_v<decltype(matrix)>) {
+    return std::move(matrix -= std::forward<RNumeric>(number));
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(matrix));
+    return std::move(copy -= std::forward<RNumeric>(number));
+  }
+}
+template <OnlyMatrix LMatrix, class RNumeric>
+inline auto operator*(LMatrix &&matrix, RNumeric &&number) noexcept(
+    std::is_same_v<typename std::decay_t<LMatrix>::numeric_t,
+                   decltype((typename std::decay_t<LMatrix>::numeric_t){} * (typename std::decay_t<RNumeric>){})> &&
+    std::is_rvalue_reference_v<decltype(matrix)> && noexcept(matrix *= std::declval<decltype(number)>())) {
+  using LType = typename std::decay_t<LMatrix>::numeric_t;
+  using RType = typename std::decay_t<RNumeric>;
+  using EndType = decltype(LType{} * RType{});
+  if constexpr (std::is_same_v<LType, EndType> && std::is_rvalue_reference_v<decltype(matrix)>) {
+    return std::move(matrix *= std::forward<RNumeric>(number));
+  } else {
+    Matrix<EndType> copy(std::forward<LMatrix>(matrix));
+    return std::move(copy *= std::forward<RNumeric>(number));
+  }
+}
+
+template <class LNumeric, OnlyMatrix RMatrix>
+inline auto operator+(LNumeric &&number, RMatrix &&matrix) noexcept(noexcept(std::declval<decltype(matrix)>() +
+                                                                             std::declval<decltype(number)>())) {
+  return std::forward<RMatrix>(matrix) + std::forward<LNumeric>(number);
+}
+template <class LNumeric, OnlyMatrix RMatrix>
+inline auto operator-(LNumeric &&number, RMatrix &&matrix) noexcept(
+    std::is_same_v<typename std::decay_t<RMatrix>::numeric_t,
+                   decltype(decltype(number){} - (typename std::decay_t<RMatrix>::numeric_t){})> &&
+    std::is_rvalue_reference_v<decltype(matrix)> &&
+    noexcept(std::declval<std::decay_t<LNumeric>>() - std::declval<decltype(matrix)>())) {
+  using RType = typename std::decay_t<RMatrix>::numeric_t;
+  using EndType = decltype(LNumeric{} - RType{});
+  if constexpr (std::is_same_v<RType, EndType> && std::is_rvalue_reference_v<decltype(matrix)>) {
+    if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+      matrix(0, 0) = std::forward<LNumeric>(number) - std::move(matrix(0, 0));
+      return std::move(matrix);
+    }
+    for (size_t r = 0; r < matrix.Rows(); ++r) {
+      for (size_t c = 0; c < matrix.Rows(); ++c) {
+        matrix(r, c) = number - std::move(matrix(r, c));
+      }
+    }
+    return std::move(matrix);
+  }
+  Matrix<EndType> buffer;
+  if (matrix.Rows() == 1 && matrix.Cols() == 1) {
+    buffer = Matrix<EndType>(1, 1);
+    buffer(0, 0) = std::forward<LNumeric>(number) - std::forward<RMatrix>(matrix)(0, 0);
+    return std::move(buffer);
+  }
+  buffer = Matrix<EndType>(matrix.Rows(), matrix.Cols());
+  for (size_t r = 0; r < matrix.Rows(); ++r) {
+    for (size_t c = 0; c < matrix.Rows(); ++c) {
+      buffer(r, c) = number - std::forward<RMatrix>(matrix)(r, c);
+    }
+  }
+  return std::move(buffer);
+}
+template <class LNumeric, OnlyMatrix RMatrix>
+inline auto operator*(LNumeric &&number, RMatrix &&matrix) noexcept(noexcept(std::declval<decltype(matrix)>() *
+                                                                             std::declval<decltype(number)>())) {
+  return std::forward<RMatrix>(matrix) * std::forward<LNumeric>(number);
+}
+
+template <class LNumeric, class RNumeric>
+inline bool operator==(const Matrix<LNumeric> &lhs,
+                       const Matrix<RNumeric> &rhs) noexcept(noexcept(std::declval<const LNumeric &>() !=
+                                                                      std::declval<const RNumeric &>())) {
+  if (lhs.Rows() != rhs.Rows() || lhs.Cols() != rhs.Cols()) {
+    return false;
+  }
+  for (size_t r = 0; r < lhs.Rows(); ++r) {
+    for (size_t c = 0; c < lhs.Cols(); ++c) {
+      if (lhs(r, c) != rhs(r, c)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+template <class LNumeric, class RNumeric>
+inline bool operator!=(const Matrix<LNumeric> &lhs, const Matrix<RNumeric> &rhs) noexcept(noexcept(lhs == rhs)) {
+  return !(lhs == rhs);
 }

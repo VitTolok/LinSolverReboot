@@ -3,14 +3,15 @@
 #include <cstdint>
 #include <functional>
 
-class InvalidSolutionType : public MachineError {
+class InvalidSolutionType final : public MachineError {
  public:
-  [[nodiscard]] const char *what() const noexcept override {
-    return message_.c_str();
+  InvalidSolutionType() {
+    message_ptr = message_;
   }
+  ~InvalidSolutionType() final = default;
 
  private:
-  std::string message_ = "Solver received input of the wrong type";
+  inline static constexpr const char message_[] = "Solver received input of the wrong type";
 };
 
 struct Solvable {
@@ -25,7 +26,7 @@ struct Progress {
 };
 
 struct Solution {
-  virtual std::unique_ptr<Solution> Detatch() = 0;
+  virtual std::unique_ptr<Solution> Detach() = 0;
   virtual ~Solution() {
   }
 };

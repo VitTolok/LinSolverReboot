@@ -65,7 +65,7 @@ void ProgressReport::Execute() {
 void Finisher(Process &process, Solution &&solution) {
   *process.progress_ = 100;
   std::lock_guard lock(process.mutex_);
-  process.solution_ = solution.Detatch();
+  process.solution_ = solution.Detach();
   process.end_ = std::chrono::steady_clock::now();
   process.ui_->status->setText("Finished.");
 }
@@ -76,7 +76,7 @@ void Terminator(Process &process, MachineError &&exception) {
   process.progress_->Report();
   std::lock_guard lock(process.mutex_);
   process.ui_->status->setText("Error.");
-  process.error_ = exception.Clone();
+  process.error_ = exception.Detach();
   process.end_ = std::chrono::steady_clock::now();
 }
 
