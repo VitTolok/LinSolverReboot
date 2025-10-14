@@ -1,4 +1,5 @@
 add_subdirectory(numeric)
+add_subdirectory(solvercore)
 add_subdirectory(GUI)
 
 set (CMAKE_EXPORT_COMPILE_COMMANDS true)

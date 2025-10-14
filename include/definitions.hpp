@@ -3,6 +3,17 @@
 #include <stdexcept>
 #include <memory>
 
+template <class A, class B>
+concept Addable = requires(A a, B b) { a + b; };
+template <class A, class B>
+concept Subtractable = requires(A a, B b) { a - b; };
+template <class A, class B>
+concept Multipliable = requires(A a, B b) { a * b; };
+template <class A, class B>
+concept Divisible = requires(A a, B b) { a / b; };
+template <class A, class B>
+concept Moddable = requires(A a, B b) { a % b; };
+
 class MachineError : public std::exception {
  public:
   MachineError() : message_ptr(message_) {

@@ -653,10 +653,11 @@ inline Matrix<NumericA> &operator/=(Matrix<NumericA> &matrix,
 }
 
 template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+  requires Addable<typename std::decay_t<LMatrix>::numeric_t, typename std::decay_t<RMatrix>::numeric_t>
 inline auto operator+(LMatrix &&first, RMatrix &&second) {
   using LType = typename std::decay_t<LMatrix>::numeric_t;
   using RType = typename std::decay_t<RMatrix>::numeric_t;
-  using EndType = decltype(LType{} + RType{});
+  using EndType = decltype(std::declval<const LType &>() + std::declval<const RType &>());
   if constexpr (std::is_same_v<LType, EndType> && std::is_rvalue_reference_v<decltype(first)>) {
     return std::move(first += std::forward<RMatrix>(second));
   } else if constexpr (std::is_same_v<RType, EndType> && std::is_rvalue_reference_v<decltype(second)>) {
@@ -667,6 +668,7 @@ inline auto operator+(LMatrix &&first, RMatrix &&second) {
   }
 }
 template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+  requires Subtractable<typename std::decay_t<LMatrix>::numeric_t, typename std::decay_t<RMatrix>::numeric_t>
 inline auto operator-(LMatrix &&first, RMatrix &&second) {
   using LType = typename std::decay_t<LMatrix>::numeric_t;
   using RType = typename std::decay_t<RMatrix>::numeric_t;
@@ -681,6 +683,7 @@ inline auto operator-(LMatrix &&first, RMatrix &&second) {
   }
 }
 template <OnlyMatrix LMatrix, OnlyMatrix RMatrix>
+  requires Multipliable<typename std::decay_t<LMatrix>::numeric_t, typename std::decay_t<RMatrix>::numeric_t>
 inline auto operator*(LMatrix &&first, RMatrix &&second) {
   using LType = typename std::decay_t<LMatrix>::numeric_t;
   using RType = typename std::decay_t<RMatrix>::numeric_t;
@@ -696,13 +699,14 @@ inline auto operator*(LMatrix &&first, RMatrix &&second) {
 }
 
 template <OnlyMatrix LMatrix, class RNumeric>
+  requires Addable<typename std::decay_t<LMatrix>::numeric_t, std::decay_t<RNumeric>>
 inline auto operator+(LMatrix &&matrix, RNumeric &&number) noexcept(
     std::is_same_v<typename std::decay_t<LMatrix>::numeric_t,
                    decltype((typename std::decay_t<LMatrix>::numeric_t){} * (typename std::decay_t<RNumeric>){})> &&
     std::is_rvalue_reference_v<decltype(matrix)> && noexcept(matrix += std::declval<decltype(number)>())) {
   using LType = typename std::decay_t<LMatrix>::numeric_t;
   using RType = typename std::decay_t<RNumeric>;
-  using EndType = decltype(LType{} + RType{});
+  using EndType = decltype(std::declval<const LType &>() + std::declval<const RType &>());
   if constexpr (std::is_same_v<LType, EndType> && std::is_rvalue_reference_v<decltype(matrix)>) {
     return std::move(matrix += std::forward<RNumeric>(number));
   } else {
@@ -711,6 +715,7 @@ inline auto operator+(LMatrix &&matrix, RNumeric &&number) noexcept(
   }
 }
 template <OnlyMatrix LMatrix, class RNumeric>
+  requires Subtractable<typename std::decay_t<LMatrix>::numeric_t, std::decay_t<RNumeric>>
 inline auto operator-(LMatrix &&matrix, RNumeric &&number) noexcept(
     std::is_same_v<typename std::decay_t<LMatrix>::numeric_t,
                    decltype((typename std::decay_t<LMatrix>::numeric_t){} * (typename std::decay_t<RNumeric>){})> &&
@@ -726,6 +731,7 @@ inline auto operator-(LMatrix &&matrix, RNumeric &&number) noexcept(
   }
 }
 template <OnlyMatrix LMatrix, class RNumeric>
+  requires Multipliable<typename std::decay_t<LMatrix>::numeric_t, std::decay_t<RNumeric>>
 inline auto operator*(LMatrix &&matrix, RNumeric &&number) noexcept(
     std::is_same_v<typename std::decay_t<LMatrix>::numeric_t,
                    decltype((typename std::decay_t<LMatrix>::numeric_t){} * (typename std::decay_t<RNumeric>){})> &&
@@ -742,18 +748,22 @@ inline auto operator*(LMatrix &&matrix, RNumeric &&number) noexcept(
 }
 
 template <class LNumeric, OnlyMatrix RMatrix>
+  requires Addable<std::decay_t<LNumeric>, typename std::decay_t<RMatrix>::numeric_t>
 inline auto operator+(LNumeric &&number, RMatrix &&matrix) noexcept(noexcept(std::declval<decltype(matrix)>() +
                                                                              std::declval<decltype(number)>())) {
   return std::forward<RMatrix>(matrix) + std::forward<LNumeric>(number);
 }
 template <class LNumeric, OnlyMatrix RMatrix>
+  requires Subtractable<std::decay_t<LNumeric>, typename std::decay_t<RMatrix>::numeric_t>
 inline auto operator-(LNumeric &&number, RMatrix &&matrix) noexcept(
     std::is_same_v<typename std::decay_t<RMatrix>::numeric_t,
-                   decltype(decltype(number){} - (typename std::decay_t<RMatrix>::numeric_t){})> &&
+                   decltype(std::declval<decltype(number)>() -
+                            std::declval<typename std::decay_t<RMatrix>::numeric_t>())> &&
     std::is_rvalue_reference_v<decltype(matrix)> &&
-    noexcept(std::declval<std::decay_t<LNumeric>>() - std::declval<decltype(matrix)>())) {
+    noexcept(std::declval<std::decay_t<LNumeric>>() - std::declval<typename std::decay_t<RMatrix>::numeric_t>())) {
   using RType = typename std::decay_t<RMatrix>::numeric_t;
-  using EndType = decltype(LNumeric{} - RType{});
+  using EndType =
+      decltype(std::declval<std::decay_t<LNumeric>>() - std::declval<typename std::decay_t<RMatrix>::numeric_t>());
   if constexpr (std::is_same_v<RType, EndType> && std::is_rvalue_reference_v<decltype(matrix)>) {
     if (matrix.Rows() == 1 && matrix.Cols() == 1) {
       matrix(0, 0) = std::forward<LNumeric>(number) - std::move(matrix(0, 0));
@@ -781,6 +791,7 @@ inline auto operator-(LNumeric &&number, RMatrix &&matrix) noexcept(
   return std::move(buffer);
 }
 template <class LNumeric, OnlyMatrix RMatrix>
+  requires Multipliable<std::decay_t<LNumeric>, typename std::decay_t<RMatrix>::numeric_t>
 inline auto operator*(LNumeric &&number, RMatrix &&matrix) noexcept(noexcept(std::declval<decltype(matrix)>() *
                                                                              std::declval<decltype(number)>())) {
   return std::forward<RMatrix>(matrix) * std::forward<LNumeric>(number);
