@@ -54,6 +54,7 @@ target_link_libraries(Process PUBLIC
   Qt6::Gui
   Qt6::Widgets
   Qt6::UiTools
+  MatAriSolver
 )
 
 target_link_libraries(MainWindow PUBLIC
@@ -62,5 +63,5 @@ target_link_libraries(MainWindow PUBLIC
   Qt6::Widgets
   Qt6::UiTools
   Process
-  DecompInterface
+  interfaces
 )

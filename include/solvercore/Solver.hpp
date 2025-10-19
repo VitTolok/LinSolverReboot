@@ -56,3 +56,6 @@ class Solver {
   std::function<void(Solution &&)> finisher_;
   std::function<void(MachineError &&)> terminator_;
 };
+
+enum class NumericType { kLongDouble, kRational };
+enum class OperatorType { kAdd, kSub, kMul, kDiv, kMod };

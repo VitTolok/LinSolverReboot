@@ -3,16 +3,14 @@
 #include "DecompSolver.hpp"
 #include <sstream>
 
-using TypeIdentifyer = DecompSolvable::NumericType;
-
 void DecompInterface::SetProgress(int16_t progress) {
   ui_->progressBar->setValue(progress);
 }
 
 DecompInterface::DecompInterface(QWidget *parent) : Interface(parent), ui_(new Ui::DecompInterface{}) {
   ui_->setupUi(this);
-  ui_->type_choice_combo_box->addItem("double", static_cast<int32_t>(TypeIdentifyer::kDouble));
-  ui_->type_choice_combo_box->addItem("rational", static_cast<int32_t>(TypeIdentifyer::kRational));
+  ui_->type_choice_combo_box->addItem("double", static_cast<int32_t>(NumericType::kLongDouble));
+  ui_->type_choice_combo_box->addItem("rational", static_cast<int32_t>(NumericType::kRational));
 }
 
 void DecompInterface::ActivateInProgress(const Solvable &solvable) {
@@ -21,13 +19,13 @@ void DecompInterface::ActivateInProgress(const Solvable &solvable) {
     throw WrongInterface{};
   }
   switch (ptr->numeric_type) {
-    case TypeIdentifyer::kDouble:
+    case NumericType::kLongDouble:
       ui_->type_choice_combo_box->setCurrentIndex(
-          ui_->type_choice_combo_box->findData(static_cast<int32_t>(TypeIdentifyer::kDouble)));
+          ui_->type_choice_combo_box->findData(static_cast<int32_t>(NumericType::kLongDouble)));
       break;
-    case TypeIdentifyer::kRational:
+    case NumericType::kRational:
       ui_->type_choice_combo_box->setCurrentIndex(
-          ui_->type_choice_combo_box->findData(static_cast<int32_t>(TypeIdentifyer::kRational)));
+          ui_->type_choice_combo_box->findData(static_cast<int32_t>(NumericType::kRational)));
       break;
     default:
       throw WrongInterface{};
@@ -50,14 +48,14 @@ void DecompInterface::ActivateSuccess(const Solvable &solvable, const Solution &
     throw WrongInterface{};
   }
   switch (ptr->numeric_type) {
-    case TypeIdentifyer::kDouble:
+    case NumericType::kLongDouble:
       ui_->type_choice_combo_box->setCurrentIndex(
-          ui_->type_choice_combo_box->findData(static_cast<int32_t>(TypeIdentifyer::kDouble)));
+          ui_->type_choice_combo_box->findData(static_cast<int32_t>(NumericType::kLongDouble)));
       PrintSolution(ui_, dynamic_cast<const DecompSolution<long double> &>(solution));
       break;
-    case TypeIdentifyer::kRational:
+    case NumericType::kRational:
       ui_->type_choice_combo_box->setCurrentIndex(
-          ui_->type_choice_combo_box->findData(static_cast<int32_t>(TypeIdentifyer::kRational)));
+          ui_->type_choice_combo_box->findData(static_cast<int32_t>(NumericType::kRational)));
       PrintSolution(ui_, dynamic_cast<const DecompSolution<Rational> &>(solution));
       break;
     default:
@@ -76,7 +74,7 @@ std::unique_ptr<Process> DecompInterface::MakeProcess(QWidget *parent) {
   return std::make_unique<Process>(
       Process::ProcType::kDecompProc,
       std::make_unique<DecompSolvable>(ui_->source_matrix_text_edit->toPlainText().toStdString(),
-                                       static_cast<TypeIdentifyer>(ui_->type_choice_combo_box->currentData().toInt())),
+                                       static_cast<NumericType>(ui_->type_choice_combo_box->currentData().toInt())),
       *this, parent);
 }
 

@@ -1,6 +1,7 @@
 #include "Process.hpp"
 #include "DecompSolver.hpp"
 #include "TestSolver.hpp"
+#include "MatAriSolver.hpp"
 #include "Interface.hpp"
 #include "ui_Process.h"
 
@@ -95,6 +96,11 @@ Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&solvable, Inter
   switch (proc_type) {
     case ProcType::kTestProc:
       solver_ = std::make_unique<TestSolver>(
+          *progress_, [this](Solution &&s) -> void { Finisher(*this, std::move(s)); },
+          [this](MachineError &&e) -> void { Terminator(*this, std::move(e)); });
+      break;
+    case ProcType::kMatAriProc:
+      solver_ = std::make_unique<MatAriSolver>(
           *progress_, [this](Solution &&s) -> void { Finisher(*this, std::move(s)); },
           [this](MachineError &&e) -> void { Terminator(*this, std::move(e)); });
       break;

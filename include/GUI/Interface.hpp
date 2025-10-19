@@ -2,6 +2,7 @@
 #include <QWidget>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QComboBox>
 #include <QMutex>
 #include "Solver.hpp"
 #include <mutex>
@@ -27,3 +28,16 @@ class Interface : public QWidget {
   virtual ~Interface() {
   }
 };
+
+inline void ChoiceBoxFillNumeric(QComboBox *ptr) {
+  ptr->addItem("long double", static_cast<int32_t>(NumericType::kLongDouble));
+  ptr->addItem("Rational", static_cast<int32_t>(NumericType::kRational));
+}
+
+inline void ChoiceBoxFillOperator(QComboBox *ptr) {
+  ptr->addItem("+", static_cast<int32_t>(OperatorType::kAdd));
+  ptr->addItem("-", static_cast<int32_t>(OperatorType::kSub));
+  ptr->addItem("*", static_cast<int32_t>(OperatorType::kMul));
+  ptr->addItem("/", static_cast<int32_t>(OperatorType::kDiv));
+  ptr->addItem("%", static_cast<int32_t>(OperatorType::kMod));
+}

@@ -80,19 +80,19 @@ inline std::unique_ptr<Solution> HandleOperator(const MatAriSolvable *ptr) {
   std::istringstream(ptr->first) >> first;
   std::istringstream(ptr->second) >> second;
   switch (ptr->operator_type) {
-    case MatAriSolvable::Operator::kAdd:
+    case OperatorType::kAdd:
       return HandleSum<First, Second, Plain>(ptr, first, second);
       break;
-    case MatAriSolvable::Operator::kSub:
+    case OperatorType::kSub:
       return HandleSub<First, Second, Plain>(ptr, first, second);
       break;
-    case MatAriSolvable::Operator::kMul:
+    case OperatorType::kMul:
       return HandleMult<First, Second, Plain>(ptr, first, second);
       break;
-    case MatAriSolvable::Operator::kDiv:
+    case OperatorType::kDiv:
       return HandleDiv<First, Second, Plain>(ptr, first, second);
       break;
-    case MatAriSolvable::Operator::kMod:
+    case OperatorType::kMod:
       return HandleMod<First, Second, Plain>(ptr, first, second);
       break;
     default:
@@ -116,10 +116,10 @@ inline std::unique_ptr<Solution> HandlePlain(const MatAriSolvable *ptr) {
 template <class First>
 inline std::unique_ptr<Solution> HandleSecond(const MatAriSolvable *ptr) {
   switch (ptr->second_type) {
-    case MatAriSolvable::NumericType::kDouble:
+    case NumericType::kLongDouble:
       return HandlePlain<First, long double>(ptr);
       break;
-    case MatAriSolvable::NumericType::kRational:
+    case NumericType::kRational:
       return HandlePlain<First, Rational>(ptr);
       break;
     default:
@@ -134,10 +134,10 @@ void MatAriSolver::operator()(const Solvable &solvable) const {
   }
   std::unique_ptr<Solution> solution;
   switch (ptr->first_type) {
-    case MatAriSolvable::NumericType::kDouble:
+    case NumericType::kLongDouble:
       solution = HandleSecond<long double>(ptr);
       break;
-    case MatAriSolvable::NumericType::kRational:
+    case NumericType::kRational:
       solution = HandleSecond<Rational>(ptr);
       break;
     default:

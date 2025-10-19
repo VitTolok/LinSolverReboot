@@ -39,12 +39,6 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QTextBrowser" name="text_browser_1"/>
-      </item>
-      <item row="0" column="2">
-       <widget class="QTextBrowser" name="text_browser_2"/>
-      </item>
       <item row="0" column="3">
        <widget class="QLabel" name="eq_label">
         <property name="text">
@@ -75,6 +69,12 @@
          <string>Execute</string>
         </property>
        </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QPlainTextEdit" name="text_edit_1"/>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPlainTextEdit" name="text_edit_2"/>
       </item>
      </layout>
     </widget>

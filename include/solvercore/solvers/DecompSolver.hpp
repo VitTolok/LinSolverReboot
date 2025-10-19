@@ -6,7 +6,7 @@
 
 struct DecompSolvable : public Solvable {
   std::string input;
-  enum class NumericType { kDouble, kRational } numeric_type;
+  NumericType numeric_type;
   DecompSolvable(std::string &&string, NumericType type) {
     input = std::move(string);
     numeric_type = type;
@@ -65,9 +65,9 @@ inline std::unique_ptr<Solver> MakeDecompSolver(Progress &progress, const std::f
     throw InvalidSolutionType{};
   }
   switch (ptr->numeric_type) {
-    case DecompSolvable::NumericType::kDouble:
+    case NumericType::kLongDouble:
       return std::make_unique<DecompSolver<long double>>(progress, finisher, terminator);
-    case DecompSolvable::NumericType::kRational:
+    case NumericType::kRational:
       return std::make_unique<DecompSolver<Rational>>(progress, finisher, terminator);
     default:
       throw InvalidSolutionType{};

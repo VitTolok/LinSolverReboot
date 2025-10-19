@@ -77,7 +77,7 @@ MainWindow::MainWindow(QWidget *parent)
   auto scroll_content = new QWidget;
   stack_ = new QVBoxLayout(scroll_content);
   ui_->scrollArea->setWidget(scroll_content);
-  Interface *interfaces[]{&test_interface_, &decomp_interface_};
+  Interface *interfaces[]{&test_interface_, &decomp_interface_, &mat_ari_interface_};
   for (auto interface : interfaces) {
     RegisterInterface(interface);
   }

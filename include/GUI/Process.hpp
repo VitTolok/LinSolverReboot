@@ -50,7 +50,7 @@ class Process : public QWidget {
   void SoftReportToInterface();
 
  public:
-  enum class ProcType { kDecompProc, kTestProc };
+  enum class ProcType { kDecompProc, kTestProc, kMatAriProc };
   Process(ProcType, std::unique_ptr<Solvable> &&, Interface &, QWidget *parent = nullptr);
   ~Process() override;
   Interface *GetInterface();
