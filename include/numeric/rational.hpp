@@ -346,7 +346,7 @@ inline Rational operator/(Integer &&integer, ORational &&rational) {
     throw InvalidRational{};
   }
   Rational inverse = std::forward<ORational>(rational) / std::forward<Integer>(integer);
-  std::swap(const_cast<UBigInt &>(rational.num_.Abs()), inverse.den_);
+  std::swap(rational.num_.Abs(), inverse.den_);
   return inverse;
 }
 template <OnlyRational ORational, SomeInt Integer>

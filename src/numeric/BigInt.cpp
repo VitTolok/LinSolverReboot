@@ -194,10 +194,6 @@ BigInt::operator int64_t() const {
   return static_cast<int64_t>(modulus) * (pos_ ? 1 : -1);
 }
 
-const UBigInt &BigInt::Abs() const noexcept {
-  return abs_;
-}
-
 std::ostream &operator<<(std::ostream &out, const BigInt &bigint) {
   if (!bigint.pos_ && bigint.abs_ != 0) {
     out << '-';
