@@ -77,18 +77,18 @@ inline static constexpr const size_t matrix_depth_v = MatrixDepth<std::decay_t<T
 
 template <class L, class R>
 concept SameMatrixDepth = matrix_depth_v<L> == matrix_depth_v<R>;
-template <class L, class R>
-concept BothMatrix = requires {
-  requires matrix_depth_v<std::decay_t<L>> > 0 && matrix_depth_v<std::decay_t<R>> > 0;
-  requires matrix_depth_v<std::decay_t<L>> == matrix_depth_v<std::decay_t<R>>;
-};
-template <class L, class R>
-concept LMatRNum = matrix_depth_v<std::decay_t<L>> > matrix_depth_v<std::decay_t<R>>;
-template <class L, class R>
-concept LNumRMat = matrix_depth_v<std::decay_t<L>> < matrix_depth_v<std::decay_t<R>>;
-
 template <class T>
 concept OnlyMatrix = matrix_depth_v<T> > 0;
+
+template <class L, class R>
+concept BothMatrix = requires {
+  requires OnlyMatrix<L> && OnlyMatrix<R>;
+  requires matrix_depth_v<L> == matrix_depth_v<R>;
+};
+template <class L, class R>
+concept LMatRNum = matrix_depth_v<L> > matrix_depth_v<R>;
+template <class L, class R>
+concept LNumRMat = matrix_depth_v<L> < matrix_depth_v<R>;
 
 template <OnlyMatrix T>
 using Numeric_t = typename std::decay_t<T>::numeric_t;
@@ -105,6 +105,13 @@ template <class L, class R>
 concept RightCompoundSubtractable = requires(std::decay_t<L> l, std::decay_t<R> &r) { l.RightCompoundSub(r); };
 template <class L, class R>
 concept RightCompoundMultipliable = requires(std::decay_t<L> l, std::decay_t<R> &r) { l.RightCompoundMult(r); };
+
+template <class Numeric>
+  requires Matrixable<Numeric>
+std::istream &operator>>(std::istream &, Matrix<Numeric> &);
+template <class Numeric>
+  requires Matrixable<Numeric>
+std::ostream &operator<<(std::ostream &, const Matrix<Numeric> &);
 
 template <class Numeric>
   requires Matrixable<Numeric>
@@ -150,7 +157,7 @@ class Matrix {
   Matrix<Numeric> &operator=(const Matrix<Numeric> &) = default;
   Matrix<Numeric> &operator=(Matrix<Numeric> &&) noexcept = default;
   template <OnlyMatrix OtherMatrix>
-  Matrix<Numeric> &operator=(OtherMatrix &&)
+  inline Matrix<Numeric> &operator=(OtherMatrix &&)
     requires ValidContent<Numeric, Numeric_t<OtherMatrix>> && (!std::is_same_v<Numeric, Numeric_t<OtherMatrix>>);
 
   inline void SwapRows(size_t row1, size_t row2) noexcept;
@@ -248,6 +255,9 @@ class Matrix {
     requires SameMatrixDepth<LNumeric, RNumeric> && Comparable<LNumeric, RNumeric>
   friend inline bool operator!=(const Matrix<LNumeric> &lhs,
                                 const Matrix<RNumeric> &rhs) noexcept(noexcept(lhs == rhs));
+
+  friend std::istream &operator>> <>(std::istream &, Matrix<Numeric> &);
+  friend std::ostream &operator<< <>(std::ostream &, const Matrix<Numeric> &);
 
  private:
   std::vector<std::vector<Numeric>> contents_;
@@ -413,7 +423,7 @@ inline Matrix<Numeric> Matrix<Numeric>::Eye(size_t size, SomeNumericA &&value, S
 template <class Numeric>
   requires Matrixable<Numeric>
 template <OnlyMatrix OtherMatrix>
-Matrix<Numeric> &Matrix<Numeric>::operator=(OtherMatrix &&other)
+inline Matrix<Numeric> &Matrix<Numeric>::operator=(OtherMatrix &&other)
   requires ValidContent<Numeric, Numeric_t<OtherMatrix>> && (!std::is_same_v<Numeric, Numeric_t<OtherMatrix>>)
 {
   *this = Matrix<Numeric>(other.Rows(), other.Cols());
@@ -577,30 +587,22 @@ std::ostream &operator<<(std::ostream &out, const Matrix<Numeric> &matrix) {
     return out;
   }
   std::vector<size_t> lengths(matrix.Cols(), 0);
+  std::string output;
   for (size_t col = 0; col < matrix.Cols(); col++) {
     for (size_t row = 0; row < matrix.Rows(); row++) {
-      lengths[col] = std::max(lengths[col], (std::ostringstream() << matrix(row, col)).str().size());
+      output = (std::ostringstream() << matrix(row, col)).str();
+      lengths[col] = std::max(lengths[col], output.size());
     }
   }
   for (size_t row = 0; row < matrix.Rows(); ++row) {
-    if (row == 0) {
-      out << "/ ";
-    } else if (row + 1 == matrix.Rows()) {
-      out << "\\ ";
-    } else {
-      out << "| ";
-    }
     for (size_t col = 0; col < matrix.Cols(); ++col) {
-      out << matrix(row, col)
-          << std::string(lengths[col] - (std::ostringstream() << matrix(row, col)).str().size() + 1, ' ');
+      output = (std::ostringstream() << matrix(row, col)).str();
+      out << output;
+      for (size_t i = 0; i < lengths[col] - output.size() + 1; i++) {
+        out << ' ';
+      }
     }
-    if (row + 1 == matrix.Rows()) {
-      out << "/\n";
-    } else if (row == 0) {
-      out << "\\\n";
-    } else {
-      out << "|\n";
-    }
+    out << '\n';
   }
   return out;
 }
@@ -608,79 +610,26 @@ std::ostream &operator<<(std::ostream &out, const Matrix<Numeric> &matrix) {
 template <class Numeric>
   requires Matrixable<Numeric>
 std::istream &operator>>(std::istream &in, Matrix<Numeric> &matrix) {
-  std::vector<std::vector<Numeric>> contents;
   std::string input;
-  Numeric value;
-  size_t cols = 0;
-  size_t rows = 0;
-  while (in >> input) {
-    contents.emplace_back();
-    if (rows == 0) {
-      if (input != "/") {
-        throw InvalidMatrixString();
-      }
-      in >> input;
-      while (input != "/" && input != "\\") {
-        try {
-          std::istringstream(input) >> value;
-        } catch (...) {
-          throw InvalidMatrixString();
-        }
-        contents[0].push_back(value);
-        cols++;
-        in >> input;
-      }
-      if (input == "/") {
-        matrix = Matrix<Numeric>(std::move(contents));
-        return in;
-      }
-      if (input != "\\") {
-        throw InvalidMatrixString();
-      }
-      rows++;
-      continue;
-    }
-    contents.back().resize(cols);
-    if (input == "\\") {
-      for (size_t i = 0; i < cols; i++) {
-        in >> input;
-        try {
-          std::istringstream(input) >> value;
-        } catch (...) {
-          throw InvalidMatrixString();
-        }
-        contents.back()[i] = value;
-      }
-      in >> input;
-      if (input == "/") {
-        matrix = Matrix<Numeric>(std::move(contents));
-        return in;
-      } else {
-        throw InvalidMatrixString();
-      }
-    }
-    if (input == "|") {
-      for (size_t i = 0; i < cols; i++) {
-        in >> input;
-        try {
-          std::istringstream(input) >> value;
-        } catch (...) {
-          throw InvalidMatrixString();
-        }
-        contents.back()[i] = value;
-      }
-      in >> input;
-      if (input != "|") {
-        throw InvalidMatrixString();
-      }
-      continue;
-    }
-    throw InvalidMatrixString();
+  std::getline(in, input);
+  if (input.empty()) {
+    matrix.contents_.clear();
+    return in;
   }
-  if (rows == 0) {
-    matrix = Matrix<Numeric>();
-  } else {
-    throw InvalidMatrixString();
+  Numeric value;
+  for (size_t i = 0; !input.empty(); std::getline(in, input), i++) {
+    std::istringstream line(std::move(input));
+    if (matrix.contents_.size() <= i) {
+      matrix.contents_.emplace_back();
+    }
+    matrix.contents_[i].clear();
+    while (line >> value) {
+      matrix.contents_[i].emplace_back(std::move(value));
+    }
+    if (matrix.contents_[i].size() != matrix.contents_[0].size()) {
+      matrix.contents_.clear();
+      throw InvalidMatrixString{};
+    }
   }
   return in;
 }
