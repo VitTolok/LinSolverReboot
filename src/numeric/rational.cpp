@@ -137,7 +137,7 @@ Rational::Approximation Rational::GetApproximation() const {
                        static_cast<int64_t>(num_approx.power) - static_cast<int64_t>(den_approx.power)};
   if (approx.multiplier < 1 - 5e-12) {
     approx.multiplier *= 10;
-    ++approx.power;
+    --approx.power;
   }
   return approx;
 }

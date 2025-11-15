@@ -220,9 +220,9 @@ inline Rational operator-(Rational &&rational) {
 
 template <OnlyRational ORationalA, OnlyRational ORationalB>
 inline Rational operator+(ORationalA &&first, ORationalB &&second) {
-  if constexpr (std::is_rvalue_reference_v<ORationalA &&>) {
+  if constexpr (std::is_rvalue_reference_v<decltype(first)>) {
     return std::move(first += second);
-  } else if constexpr (std::is_rvalue_reference_v<ORationalB &&>) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(second)>) {
     return std::move(second += first);
   } else {
     Rational copy(first);
@@ -231,9 +231,9 @@ inline Rational operator+(ORationalA &&first, ORationalB &&second) {
 }
 template <OnlyRational ORationalA, OnlyRational ORationalB>
 inline Rational operator-(ORationalA &&first, ORationalB &&second) {
-  if constexpr (std::is_rvalue_reference_v<ORationalA &&>) {
+  if constexpr (std::is_rvalue_reference_v<decltype(first)>) {
     return std::move(first -= second);
-  } else if constexpr (std::is_rvalue_reference_v<ORationalB &&>) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(second)>) {
     return std::move((second -= first) *= -1);
   } else {
     Rational copy(first);
@@ -242,9 +242,9 @@ inline Rational operator-(ORationalA &&first, ORationalB &&second) {
 }
 template <OnlyRational ORationalA, OnlyRational ORationalB>
 inline Rational operator*(ORationalA &&first, ORationalB &&second) {
-  if constexpr (std::is_rvalue_reference_v<ORationalA &&>) {
+  if constexpr (std::is_rvalue_reference_v<decltype(first)>) {
     return std::move(first *= second);
-  } else if constexpr (std::is_rvalue_reference_v<ORationalB &&>) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(second)>) {
     return std::move(second *= first);
   } else {
     Rational copy(first);
@@ -253,9 +253,9 @@ inline Rational operator*(ORationalA &&first, ORationalB &&second) {
 }
 template <OnlyRational ORationalA, OnlyRational ORationalB>
 inline Rational operator/(ORationalA &&first, ORationalB &&second) {
-  if constexpr (std::is_rvalue_reference_v<ORationalA &&>) {
+  if constexpr (std::is_rvalue_reference_v<decltype(first)>) {
     return std::move(first /= second);
-  } else if constexpr (std::is_rvalue_reference_v<ORationalB &&>) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(second)>) {
     return std::move(1 / std::move(second /= first));
   } else {
     Rational copy(first);
@@ -264,7 +264,7 @@ inline Rational operator/(ORationalA &&first, ORationalB &&second) {
 }
 template <OnlyRational ORationalA, OnlyRational ORationalB>
 inline Rational operator%(ORationalA &&first, ORationalB &&second) {
-  if constexpr (std::is_rvalue_reference_v<ORationalA &&>) {
+  if constexpr (std::is_rvalue_reference_v<decltype(first)>) {
     return std::move(first %= second);
   } else {
     Rational copy(first);
@@ -274,9 +274,9 @@ inline Rational operator%(ORationalA &&first, ORationalB &&second) {
 
 template <OnlyRational ORational, SomeInt Integer>
 inline Rational operator+(ORational &&rational, Integer &&integer) {
-  if constexpr (std::is_rvalue_reference<ORational>(rational)) {
+  if constexpr (std::is_rvalue_reference_v<decltype(rational)>) {
     return std::move(rational += integer);
-  } else if constexpr (std::is_rvalue_reference<Integer>(integer)) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)>) {
     return std::move(rational + Rational(std::move(integer)));
   } else {
     Rational copy(rational);
@@ -285,9 +285,9 @@ inline Rational operator+(ORational &&rational, Integer &&integer) {
 }
 template <OnlyRational ORational, SomeInt Integer>
 inline Rational operator-(ORational &&rational, Integer &&integer) {
-  if constexpr (std::is_rvalue_reference<ORational>(rational)) {
+  if constexpr (std::is_rvalue_reference_v<decltype(rational)>) {
     return std::move(rational -= integer);
-  } else if constexpr (std::is_rvalue_reference<Integer>(integer)) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)>) {
     return std::move(rational - Rational(std::move(integer)));
   } else {
     Rational copy(rational);
@@ -296,9 +296,9 @@ inline Rational operator-(ORational &&rational, Integer &&integer) {
 }
 template <OnlyRational ORational, SomeInt Integer>
 inline Rational operator*(ORational &&rational, Integer &&integer) {
-  if constexpr (std::is_rvalue_reference<ORational>(rational)) {
+  if constexpr (std::is_rvalue_reference_v<decltype(rational)>) {
     return std::move(rational *= integer);
-  } else if constexpr (std::is_rvalue_reference<Integer>(integer)) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)>) {
     return std::move(rational * Rational(std::move(integer)));
   } else {
     Rational copy(rational);
@@ -307,9 +307,9 @@ inline Rational operator*(ORational &&rational, Integer &&integer) {
 }
 template <OnlyRational ORational, SomeInt Integer>
 inline Rational operator/(ORational &&rational, Integer &&integer) {
-  if constexpr (std::is_rvalue_reference<ORational>(rational)) {
+  if constexpr (std::is_rvalue_reference_v<decltype(rational)>) {
     return std::move(rational /= integer);
-  } else if constexpr (std::is_rvalue_reference<Integer>(integer)) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)>) {
     return std::move(rational / Rational(std::move(integer)));
   } else {
     Rational copy(rational);
@@ -318,9 +318,9 @@ inline Rational operator/(ORational &&rational, Integer &&integer) {
 }
 template <OnlyRational ORational, SomeInt Integer>
 inline Rational operator%(ORational &&rational, Integer &&integer) {
-  if constexpr (std::is_rvalue_reference<ORational>(rational)) {
+  if constexpr (std::is_rvalue_reference_v<decltype(rational)>) {
     return std::move(rational %= integer);
-  } else if constexpr (std::is_rvalue_reference<Integer>(integer)) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)>) {
     return std::move(rational % Rational(std::move(integer)));
   } else {
     Rational copy(rational);

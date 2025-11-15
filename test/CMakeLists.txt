@@ -6,6 +6,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/test)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/test)
 
 add_subdirectory(numeric)
+add_subdirectory(solvercore)
 
 add_library(GTest_core INTERFACE)
 target_link_libraries(GTest_core INTERFACE
@@ -21,4 +22,4 @@ target_include_directories(handtest PRIVATE
   ${CMAKE_SOURCE_DIR}/include/numeric
   ${CMAKE_SOURCE_DIR}/include/solvercore
 )
-target_link_libraries(handtest PRIVATE UBigInt)
+target_link_libraries(handtest PRIVATE rational)
