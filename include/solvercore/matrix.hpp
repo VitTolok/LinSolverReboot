@@ -755,7 +755,7 @@ inline Matrix<NumericA> &operator/=(Matrix<NumericA> &matrix,
 }
 template <class NumericA, class NumericB>
   requires LMatRNum<Matrix<NumericA>, NumericB> && CompoundModdable<NumericA, NumericB>
-inline Matrix<NumericA> &operator/=(Matrix<NumericA> &matrix,
+inline Matrix<NumericA> &operator%=(Matrix<NumericA> &matrix,
                                     NumericB &&number) noexcept(NoexceptCompoundModdable<NumericA, NumericB>) {
   if (matrix.Rows() == 1 && matrix.Cols() == 1) {
     matrix(0, 0) %= std::forward<NumericB>(number);
@@ -880,11 +880,9 @@ template <class LNumeric, class RMatrix>
   requires LNumRMat<LNumeric, RMatrix> && CompoundSubtractable<LNumeric, Numeric_t<RMatrix>> &&
            ValidContent<SubType<LNumeric, Numeric_t<RMatrix>>, LNumeric>
 inline auto operator-(LNumeric &&number, RMatrix &&matrix) noexcept(
-    std::is_same_v<typename std::decay_t<RMatrix>::numeric_t,
-                   decltype(std::declval<decltype(number)>() -
-                            std::declval<typename std::decay_t<RMatrix>::numeric_t>())> &&
-    std::is_rvalue_reference_v<decltype(matrix)> &&
-    noexcept(std::declval<std::decay_t<LNumeric>>() - std::declval<typename std::decay_t<RMatrix>::numeric_t>())) {
+    std::is_same_v<Numeric_t<RMatrix>, SubType<LNumeric, Numeric_t<RMatrix>>> &&
+    std::is_rvalue_reference_v<decltype(matrix)> && NoexceptSubtractable<LNumeric, Numeric_t<RMatrix>> &&
+    NoexceptMovable<Numeric_t<RMatrix>>) {
   using RType = Numeric_t<RMatrix>;
   using EndType = SubType<LNumeric, RType>;
   if constexpr (std::is_same_v<RType, EndType> && std::is_rvalue_reference_v<decltype(matrix)>) {

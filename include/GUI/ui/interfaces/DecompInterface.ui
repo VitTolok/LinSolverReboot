@@ -48,7 +48,7 @@
          <item>
           <widget class="QPlainTextEdit" name="source_matrix_text_edit">
            <property name="styleSheet">
-            <string notr="true">font: 9pt &quot;Monospace&quot;;</string>
+            <string notr="true">font: 700 oblique 12pt &quot;DejaVu Sans Mono&quot;;</string>
            </property>
           </widget>
          </item>
@@ -91,7 +91,7 @@
          <item>
           <widget class="QTextBrowser" name="det_text_browser">
            <property name="styleSheet">
-            <string notr="true">font: 9pt &quot;Monospace&quot;;</string>
+            <string notr="true">font: 700 oblique 12pt &quot;DejaVu Sans Mono&quot;;</string>
            </property>
           </widget>
          </item>
@@ -105,7 +105,7 @@
          <item>
           <widget class="QTextBrowser" name="lower_text_browser">
            <property name="styleSheet">
-            <string notr="true">font: 9pt &quot;Monospace&quot;;</string>
+            <string notr="true">font: 700 oblique 12pt &quot;DejaVu Sans Mono&quot;;</string>
            </property>
           </widget>
          </item>
@@ -125,7 +125,7 @@
          <item>
           <widget class="QTextBrowser" name="solved_text_browser">
            <property name="styleSheet">
-            <string notr="true">font: 9pt &quot;Monospace&quot;;</string>
+            <string notr="true">font: 700 oblique 12pt &quot;DejaVu Sans Mono&quot;;</string>
            </property>
           </widget>
          </item>
@@ -139,7 +139,7 @@
          <item>
           <widget class="QTextBrowser" name="upper_text_browser">
            <property name="styleSheet">
-            <string notr="true">font: 9pt &quot;Monospace&quot;;</string>
+            <string notr="true">font: 700 oblique 12pt &quot;DejaVu Sans Mono&quot;;</string>
            </property>
           </widget>
          </item>
