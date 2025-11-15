@@ -1,3 +1,4 @@
+#pragma once
 #include "UBigInt.hpp"
 
 class BigInt {
@@ -145,7 +146,12 @@ class BigInt {
   friend BigInt operator>>(const BigInt &, size_t);
 
   explicit operator int64_t() const;
-  const UBigInt &Abs() const noexcept;
+  const UBigInt &Abs() const noexcept {
+    return abs_;
+  }
+  UBigInt &Abs() noexcept {
+    return abs_;
+  }
 
   friend std::ostream &operator<<(std::ostream &, const BigInt &);
   friend std::istream &operator>>(std::istream &, BigInt &);

@@ -9,34 +9,37 @@ uint64_t constexpr operator""_uint64(unsigned long long number) {
   return static_cast<uint64_t>(number);
 }
 
-class UBigIntUnderflow : public MachineError {
+class UBigIntUnderflow final : public MachineError {
  public:
-  [[nodiscard]] const char *what() const noexcept override {
-    return message_.c_str();
+  UBigIntUnderflow() {
+    message_ptr = message_;
   }
+  ~UBigIntUnderflow() final = default;
 
  private:
-  std::string message_ = "The unsigned big integer cannot go negative";
+  inline static constexpr const char message_[] = "The unsigned big integer cannot go negative";
 };
 
-class BigIntInvalidString : public MachineError {
+class BigIntInvalidString final : public MachineError {
  public:
-  [[nodiscard]] const char *what() const noexcept override {
-    return message_.c_str();
+  BigIntInvalidString() {
+    message_ptr = message_;
   }
+  ~BigIntInvalidString() final = default;
 
  private:
-  std::string message_ = "Use either full integers or '1.01612e288' form";
+  inline static constexpr const char message_[] = "Use either full integers or '1.01612e288' form";
 };
 
-class BigIntDivisionByZero : public MachineError {
+class BigIntDivisionByZero final : public MachineError {
  public:
-  [[nodiscard]] const char *what() const noexcept override {
-    return message_.c_str();
+  BigIntDivisionByZero() {
+    message_ptr = message_;
   }
+  ~BigIntDivisionByZero() final = default;
 
  private:
-  std::string message_ = "Can't divide by 0";
+  inline static constexpr const char message_[] = "Can't divide by 0";
 };
 
 class UBigInt {

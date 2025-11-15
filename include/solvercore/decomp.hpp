@@ -1,6 +1,5 @@
 #pragma once
 #include <optional>
-
 #include "matrix.hpp"
 
 template <class Numeric>
@@ -66,8 +65,8 @@ struct Decompose {
         simple.AddRow(cur_row, row, -simple(row, col));
       }
       cur_row++;
-      if (progress != nullptr) {
-        *progress = cur_row * 100 / simple.Rows();
+      if (progress) {
+        (*progress) = 100 * (col + 1) / simple.Cols();
       }
     }
   }

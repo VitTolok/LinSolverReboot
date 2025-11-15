@@ -2,18 +2,23 @@
 #include <cstring>
 #include <numeric>
 #include <sstream>
+#include <cmath>
 
-const int64_t &Rational::Num() const { return this->num_; }
-const uint64_t &Rational::Den() const { return this->den_; }
+const BigInt &Rational::Num() const {
+  return this->num_;
+}
+const UBigInt &Rational::Den() const {
+  return this->den_;
+}
 
 Rational &operator+=(Rational &base, const Rational &mod) {
-  base.num_ = (base.num_ * mod.den_) + (mod.num_ * base.den_);
+  base.num_ = (std::move(base.num_) * mod.den_) + (mod.num_ * base.den_);
   base.den_ *= mod.den_;
   base.Normalize();
   return base;
 }
 Rational &operator-=(Rational &base, const Rational &mod) {
-  base.num_ = (base.num_ * mod.den_) - (mod.num_ * base.den_);
+  base.num_ = (std::move(base.num_) * mod.den_) - (mod.num_ * base.den_);
   base.den_ *= mod.den_;
   base.Normalize();
   return base;
@@ -26,78 +31,51 @@ Rational &operator*=(Rational &base, const Rational &mod) {
 }
 Rational &operator/=(Rational &base, const Rational &mod) {
   base.num_ *= mod.den_;
-  base.den_ *= std::abs(mod.num_);
+  base.den_ *= mod.num_.Abs();
   if (mod.num_ < 0) {
-    base.num_ = -base.num_;
+    base.num_ = -std::move(base.num_);
   }
   base.Normalize();
   return base;
 }
-
-Rational operator+(const Rational &first, const Rational &second) {
-  Rational clone = first;
-  return clone += second;
-}
-Rational operator-(const Rational &first, const Rational &second) {
-  Rational clone = first;
-  return clone -= second;
-}
-Rational operator-(const Rational &first) {
-  Rational clone = first;
-  clone.num_ *= -1;
-  return clone;
-}
-Rational operator*(const Rational &first, const Rational &second) {
-  Rational clone = first;
-  return clone *= second;
-}
-Rational operator/(const Rational &first, const Rational &second) {
-  Rational clone = first;
-  return clone /= second;
+Rational &operator%=(Rational &base, const Rational &mod) {
+  return base -= std::move((base / mod).Floor()) * mod;
 }
 
-Rational::Rational() : num_(0), den_(1u) {}
-Rational::Rational(int64_t number) : num_(number), den_(1u) {}
-Rational::Rational(int64_t num, int64_t den) {
-  if (den < 0) {
-    num_ = -num;
-    den_ = static_cast<uint64_t>(-den);
-  } else {
-    num_ = num;
-    den_ = static_cast<uint64_t>(den);
-  }
-  this->Normalize();
+Rational &operator+=(Rational &first, Rational &&second) {
+  first.num_ = (std::move(first.num_) * second.den_) + (first.den_ * std::move(second.num_));
+  first.den_ *= second.den_;
+  first.Normalize();
+  return first;
 }
-Rational::Rational(int64_t num, uint64_t den) : num_(num), den_(den) {
-  this->Normalize();
-}
-
-bool operator<(const Rational &first, const Rational &second) {
-  return (first.num_ * second.den_) < (second.num_ * first.den_);
-}
-bool operator>(const Rational &first, const Rational &second) {
-  return second < first;
-}
-bool operator<=(const Rational &first, const Rational &second) {
-  return !(second < first);
-}
-bool operator>=(const Rational &first, const Rational &second) {
-  return !(first < second);
-}
-bool operator==(const Rational &first, const Rational &second) {
-  return (first.num_ == second.num_) && (first.den_ == second.den_);
-}
-bool operator!=(const Rational &first, const Rational &second) {
-  return !(first == second);
+Rational &operator-=(Rational &first, Rational &&second) {
+  first.num_ = (std::move(first.num_) * second.den_) - (first.den_ * std::move(second.num_));
+  first.den_ *= second.den_;
+  first.Normalize();
+  return first;
 }
 
 std::ostream &operator<<(std::ostream &out, const Rational &number) {
-  out << number.num_;
-  if (number.den_ != 1u) {
-    out << '/' << number.den_;
+  if (number == 0) {
+    return out << 0;
   }
-  return out;
+  if (number.num_.Abs() <= 1'000'000 && number.den_ <= 1'000'000) {
+    std::string numer = (std::ostringstream() << number.num_).str();
+    if (number.den_ == 1) {
+      return out << numer;
+    }
+    std::string denom = (std::ostringstream() << number.den_).str();
+    if (numer.size() + denom.size() <= 6) {
+      return out << numer << '/' << denom;
+    }
+  }
+  auto approx = number.GetApproximation();
+  if (std::abs(approx.power) <= 2) {
+    return out << (approx.multiplier * powl(10, approx.power));
+  }
+  return out << approx.multiplier << 'e' << approx.power;
 }
+
 std::istream &operator>>(std::istream &in, Rational &number) try {
   std::string input;
   in >> input;
@@ -108,37 +86,71 @@ std::istream &operator>>(std::istream &in, Rational &number) try {
     number.Normalize();
     return in;
   }
-  sep = input.find('.');
-  if (sep < input.size()) {
-    std::istringstream(input.substr(0, sep)) >> number.num_;
-    number.den_ = 1u;
-    for (size_t i = 0; i < input.size() - sep - 1; i++) {
-      number.num_ *= 10;
-      number.den_ *= 10;
+  size_t dot = input.find('.');
+  size_t exp = input.find('e');
+  int64_t mult = 0;
+  if (exp < input.size()) {
+    if (exp < input.size() - 1) {
+      std::istringstream(input.c_str() + exp + 1) >> mult;
     }
-    uint64_t leftover = 0u;
-    std::istringstream(input.substr(sep + 1, input.size())) >> leftover;
-    number.num_ += static_cast<int64_t>(leftover) * (input[0] == '-' ? -1 : 1);
-    number.Normalize();
-    return in;
+    input.resize(exp);
+  }
+  if (dot < input.size()) {
+    mult -= input.size() - dot - 1;
+    input.erase(dot, 1);
   }
   std::istringstream(input) >> number.num_;
-  number.den_ = 1u;
+  if (mult > 0) {
+    number.num_ *= Power(UBigInt(10), mult);
+    number.den_ = 1;
+  } else if (mult == 0) {
+    number.den_ = 1;
+  } else {
+    number.den_ = Power(UBigInt(10), -mult);
+    number.Normalize();
+  }
   return in;
 } catch (...) {
   throw InvalidRationalString();
 }
 
+Rational::operator BigInt() const {
+  return num_ / den_ * den_;
+}
+Rational::operator UBigInt() const {
+  if (num_ < 0) {
+    throw UBigIntUnderflow{};
+  }
+  return std::move(num_.Abs() / den_ * den_);
+}
+
+Rational &Rational::Floor() {
+  num_ /= den_;
+  den_ = 1;
+  return *this;
+}
+
+Rational::Approximation Rational::GetApproximation() const {
+  auto num_approx = num_.GetApproximation();
+  auto den_approx = den_.GetApproximation();
+  Approximation approx{num_approx.multiplier / den_approx.multiplier,
+                       static_cast<int64_t>(num_approx.power) - static_cast<int64_t>(den_approx.power)};
+  if (approx.multiplier < 1 - 5e-12) {
+    approx.multiplier *= 10;
+    ++approx.power;
+  }
+  return approx;
+}
+
 void Rational::Normalize() {
-  if (this->den_ == 1u) {
+  if (this->den_ == 1_uint64) {
     return;
   }
-  if (this->den_ == 0u) {
+  if (this->den_ == 0_uint64) {
     throw InvalidRational();
   }
-  uint64_t gcd =
-      std::gcd(static_cast<uint64_t>(std::abs(this->num_)), this->den_);
-  this->num_ /= static_cast<int64_t>(gcd);
+  UBigInt gcd = GCD(this->num_.Abs(), this->den_);
+  this->num_ /= gcd;
   this->den_ /= gcd;
   return;
 }

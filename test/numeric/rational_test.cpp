@@ -44,8 +44,8 @@ TEST_P(RationalParamTest, ParamTestOper) {
 }
 
 TEST_P(RationalParamTest, ParamTestEq) {
-  ASSERT_EQ(first, Rational(first.Num() * static_cast<int64_t>(second.Den()),
-                            first.Den() * second.Den()));
+  ASSERT_EQ(first,
+            Rational(first.Num() * second.Den(), first.Den() * second.Den()));
   ASSERT_EQ(
       first.Num(),
       Rational(first.Num() * second.Den(), first.Den() * second.Den()).Num());
