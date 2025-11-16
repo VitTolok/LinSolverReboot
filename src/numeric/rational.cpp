@@ -4,57 +4,6 @@
 #include <sstream>
 #include <cmath>
 
-const BigInt &Rational::Num() const {
-  return this->num_;
-}
-const UBigInt &Rational::Den() const {
-  return this->den_;
-}
-
-Rational &operator+=(Rational &base, const Rational &mod) {
-  base.num_ = (std::move(base.num_) * mod.den_) + (mod.num_ * base.den_);
-  base.den_ *= mod.den_;
-  base.Normalize();
-  return base;
-}
-Rational &operator-=(Rational &base, const Rational &mod) {
-  base.num_ = (std::move(base.num_) * mod.den_) - (mod.num_ * base.den_);
-  base.den_ *= mod.den_;
-  base.Normalize();
-  return base;
-}
-Rational &operator*=(Rational &base, const Rational &mod) {
-  base.num_ *= mod.num_;
-  base.den_ *= mod.den_;
-  base.Normalize();
-  return base;
-}
-Rational &operator/=(Rational &base, const Rational &mod) {
-  base.num_ *= mod.den_;
-  base.den_ *= mod.num_.Abs();
-  if (mod.num_ < 0) {
-    base.num_ = -std::move(base.num_);
-  }
-  base.Normalize();
-  return base;
-}
-Rational &operator%=(Rational &base, const Rational &mod) {
-  return base -= std::move((base / mod).Floor()) * mod;
-}
-
-Rational &operator+=(Rational &first, Rational &&second) {
-  first.num_ = (std::move(first.num_) * second.den_) + (first.den_ * std::move(second.num_));
-  first.den_ *= second.den_;
-  first.Normalize();
-  return first;
-}
-Rational &operator-=(Rational &first, Rational &&second) {
-  first.num_ = (std::move(first.num_) * second.den_) - (first.den_ * std::move(second.num_));
-  first.den_ *= second.den_;
-  first.Normalize();
-  return first;
-}
-
 std::ostream &operator<<(std::ostream &out, const Rational &number) {
   if (number == 0) {
     return out << 0;
@@ -112,45 +61,4 @@ std::istream &operator>>(std::istream &in, Rational &number) try {
   return in;
 } catch (...) {
   throw InvalidRationalString();
-}
-
-Rational::operator BigInt() const {
-  return num_ / den_ * den_;
-}
-Rational::operator UBigInt() const {
-  if (num_ < 0) {
-    throw UBigIntUnderflow{};
-  }
-  return std::move(num_.Abs() / den_ * den_);
-}
-
-Rational &Rational::Floor() {
-  num_ /= den_;
-  den_ = 1;
-  return *this;
-}
-
-Rational::Approximation Rational::GetApproximation() const {
-  auto num_approx = num_.GetApproximation();
-  auto den_approx = den_.GetApproximation();
-  Approximation approx{num_approx.multiplier / den_approx.multiplier,
-                       static_cast<int64_t>(num_approx.power) - static_cast<int64_t>(den_approx.power)};
-  if (approx.multiplier < 1 - 5e-12) {
-    approx.multiplier *= 10;
-    --approx.power;
-  }
-  return approx;
-}
-
-void Rational::Normalize() {
-  if (this->den_ == 1_uint64) {
-    return;
-  }
-  if (this->den_ == 0_uint64) {
-    throw InvalidRational();
-  }
-  UBigInt gcd = GCD(this->num_.Abs(), this->den_);
-  this->num_ /= gcd;
-  this->den_ /= gcd;
-  return;
 }
