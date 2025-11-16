@@ -6,7 +6,7 @@
 #include "ui_Process.h"
 
 ProgressReport::ProgressReport(Interface &interface)
-    : interface_(interface), active_(false), terminate_signal_(false), progress_(0), mutex_() {
+    : progress_(0), terminate_signal_(false), active_(false), interface_(interface), mutex_() {
 }
 
 void ProgressReport::operator=(int16_t progress) {
@@ -83,12 +83,13 @@ void Terminator(Process &process, MachineError &&exception) {
 
 Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&solvable, Interface &interface, QWidget *parent)
     : QWidget(parent)
-    , progress_(std::make_unique<ProgressReport>(interface))
-    , thread_(new QThread(this))
-    , interface_(interface)
     , solvable_(std::move(solvable))
+    , interface_(interface)
+    , ui_(nullptr)
+    , thread_(new QThread(this))
     , solver_(nullptr)
     , start_(std::chrono::steady_clock::now())
+    , progress_(std::make_unique<ProgressReport>(interface))
     , error_(nullptr)
     , solution_(nullptr)
     , mutex_() {

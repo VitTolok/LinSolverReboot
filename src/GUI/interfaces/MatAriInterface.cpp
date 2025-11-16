@@ -2,7 +2,7 @@
 #include "ui_MatAriInterface.h"
 #include "MatAriSolver.hpp"
 
-void MatAriInterface::SetProgress(int16_t progress) {
+void MatAriInterface::SetProgress(int16_t) {
 }
 
 MatAriInterface::MatAriInterface(QWidget *parent) : Interface(parent), ui_(new Ui::MatAriInterface{}) {
