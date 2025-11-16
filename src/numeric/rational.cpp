@@ -3,8 +3,12 @@
 #include <numeric>
 #include <sstream>
 
-const int64_t &Rational::Num() const { return this->num_; }
-const uint64_t &Rational::Den() const { return this->den_; }
+const int64_t &Rational::Num() const {
+  return this->num_;
+}
+const uint64_t &Rational::Den() const {
+  return this->den_;
+}
 
 Rational &operator+=(Rational &base, const Rational &mod) {
   base.num_ = (base.num_ * mod.den_) + (mod.num_ * base.den_);
@@ -56,8 +60,10 @@ Rational operator/(const Rational &first, const Rational &second) {
   return clone /= second;
 }
 
-Rational::Rational() : num_(0), den_(1u) {}
-Rational::Rational(int64_t number) : num_(number), den_(1u) {}
+Rational::Rational() : num_(0), den_(1u) {
+}
+Rational::Rational(int64_t number) : num_(number), den_(1u) {
+}
 Rational::Rational(int64_t num, int64_t den) {
   if (den < 0) {
     num_ = -num;
@@ -136,8 +142,7 @@ void Rational::Normalize() {
   if (this->den_ == 0u) {
     throw InvalidRational();
   }
-  uint64_t gcd =
-      std::gcd(static_cast<uint64_t>(std::abs(this->num_)), this->den_);
+  uint64_t gcd = std::gcd(static_cast<uint64_t>(std::abs(this->num_)), this->den_);
   this->num_ /= static_cast<int64_t>(gcd);
   this->den_ /= gcd;
   return;

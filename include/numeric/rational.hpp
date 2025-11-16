@@ -2,19 +2,20 @@
 #include "definitions.hpp"
 #include <cstdint>
 #include <iostream>
+#include <compare>
 
 class InvalidRational : public MachineError {
-private:
+ private:
   std::string message_ = "Denominator can't be 0";
 };
 
 class InvalidRationalString : public MachineError {
-private:
+ private:
   std::string message_ = "Invalid Rational String";
 };
 
 class Rational {
-public:
+ public:
   const int64_t &Num() const;
   const uint64_t &Den() const;
 
@@ -44,7 +45,7 @@ public:
   friend std::ostream &operator<<(std::ostream &, const Rational &);
   friend std::istream &operator>>(std::istream &, Rational &);
 
-private:
+ private:
   int64_t num_;
   uint64_t den_;
   void Normalize();
