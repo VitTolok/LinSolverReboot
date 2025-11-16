@@ -2,9 +2,8 @@
 #include <gtest/gtest.h>
 
 class ExampleTests : public ::testing::TestWithParam<
-                         std::tuple<std::string, std::string, std::string,
-                                    std::string, std::optional<double>>> {
-public:
+                         std::tuple<std::string, std::string, std::string, std::string, std::optional<double>>> {
+ public:
   Matrix<double> source;
   Decompose<double> expected;
 
@@ -47,27 +46,13 @@ TEST_P(ExampleTests, ExampleDecompTests) {
 INSTANTIATE_TEST_SUITE_P(
     ExampleDecompTests, ExampleTests,
     ::testing::Values(
-        std::make_tuple("/ 1 /", "/ 1 /", "/ 1 /", "/ 1 /", 1),
-        std::make_tuple("/ 1 2 \\ \\ 3 4 /", "/ 1  0 \\ \\ 0 1 /",
-                        "/ 1  0 \\ \\ 3 1 /", "/ 1 2 \\ \\ 0 -2 /", -2),
-        std::make_tuple("/ 1 2 2 \\ | 4 4 2 | \\ 4 6 4 /",
-                        "/ 1 0 0 \\ | 0 1 0 | \\ 0 0 1 /",
-                        "/ 1 0 0 \\ | 4 1 0 | \\ 4 0.5 1 /",
-                        "/ 1 2 2 \\ | 0 -4 -6 | \\ 0 0 -1 /", 4),
-        std::make_tuple(
-            "/ 2 8 4 1 \\ | 1 2 3 3 | | 1 2 6 2 | \\ 1 3 4 2 /",
-            "/ 1 0 0 0 \\ | 0 1 0 0 | | 0 0 1 0 | \\ 0 0 0 1 /",
-            "/ 1 0 0 0 \\ | 0.5 1 0 0 | | 0.5 1 1 0 | \\ 0.5 0.5 0.5 1 /",
-            "/ 2 8 4 1 \\ | 0 -2 1 2.5 | | 0 0 3 -1 | \\ 0 0 0 0.75 /", -9),
-        std::make_tuple("/ 2 8 4 1 \\ | 1 4 3 3 | | 1 2 6 2 | \\ 1 3 4 2 /",
-                        "/ 1 0 0 0 \\ | 0 1 0 0 | | 0 0 1 0 | \\ 0 0 0 1 /", "",
-                        "", 3),
-        std::make_tuple("/ 1 2 3 4 \\ | 1 2 4 8 | | 1 0 1 0 | \\ 3 4 8 12 /",
-                        "/ 1 0 0 -4 \\ | 0 1 0 -2 | | 0 0 1 4 | \\ 0 0 0 0 /",
-                        "", "", 0),
-        std::make_tuple("/ 1 2 3 4 \\ | 1 2 4 8 | \\ 1 0 1 0 /",
-                        "/ 1 0 0 -4 \\ | 0 1 0 -2 | \\ 0 0 1 4 /", "", "",
-                        std::optional<double>()),
-        std::make_tuple("/ 1 2 3 \\ | 1 2 4 | | 1 0 1 | \\ 4 5 1 /",
-                        "/ 1 0 0 \\ | 0 1 0 | | 0 0 1 | \\ 0 0 0 /", "", "",
-                        std::optional<double>())));
+        std::make_tuple("1", "1", "1", "1", 1), std::make_tuple("1 2\n3 4", "1 0\n0 1", "1 0\n3 1", "1 2\n0 -2", -2),
+        std::make_tuple("1 2 2\n4 4 2\n4 6 4", "1 0 0\n0 1 0\n0 0 1", "1 0 0\n4 1 0\n4 0.5 1", "1 2 2\n0 -4 -6\n0 0 -1",
+                        4),
+        std::make_tuple("2 8 4 1\n1 2 3 3\n1 2 6 2\n1 3 4 2", "1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1",
+                        "1 0 0 0\n0.5 1 0 0\n0.5 1 1 0\n0.5 0.5 0.5 1", "2 8 4 1\n0 -2 1 2.5\n0 0 3 -1\n0 0 0 0.75",
+                        -9),
+        std::make_tuple("2 8 4 1\n1 4 3 3\n1 2 6 2\n1 3 4 2", "1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1", "", "", 3),
+        std::make_tuple("1 2 3 4\n1 2 4 8\n1 0 1 0\n3 4 8 12", "1 0 0 -4\n0 1 0 -2\n0 0 1 4\n0 0 0 0", "", "", 0),
+        std::make_tuple("1 2 3 4\n1 2 4 8\n1 0 1 0", "1 0 0 -4\n0 1 0 -2\n0 0 1 4", "", "", std::optional<double>()),
+        std::make_tuple("1 2 3\n1 2 4\n1 0 1\n4 5 1", "1 0 0\n0 1 0\n0 0 1\n0 0 0", "", "", std::optional<double>())));
