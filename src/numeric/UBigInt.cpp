@@ -6,23 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <numeric>
-
-UBigInt::UBigInt() : storage_() {
-  Shrink();
-}
-UBigInt::UBigInt(uint64_t number) : storage_(2, 0u) {
-  storage_[0] = static_cast<uint32_t>(number % (1_uint64 << 32));
-  storage_[1] = static_cast<uint32_t>(number >> 32);
-  Shrink();
-}
-
-UBigInt &UBigInt::operator=(uint64_t number) {
-  storage_.resize(2, 0);
-  storage_[0] = static_cast<uint32_t>(number % (1_uint64 << 32));
-  storage_[1] = static_cast<uint32_t>(number >> 32);
-  Shrink();
-  return *this;
-}
+#include <bit>
 
 UBigInt &operator+=(UBigInt &first, const UBigInt &second) {
   if (first == 0) {
@@ -223,11 +207,14 @@ UBigInt &operator-=(UBigInt &bigint, uint64_t number) {
 }
 
 UBigInt &operator*=(UBigInt &bigint, uint64_t number) {
-  if (bigint == 0 || number == 1) {
-    return bigint;
-  }
   if (number == 0) {
     return bigint = 0;
+  }
+  size_t zeroes = std::countr_zero(number);
+  bigint <<= zeroes;
+  number >>= zeroes;
+  if (bigint == 0 || number == 1) {
+    return bigint;
   }
   if (number < (1_uint64 << 32)) {
     uint32_t carryover = 0;
@@ -253,6 +240,9 @@ UBigInt &operator/=(UBigInt &bigint, uint64_t div) {
   if (div == 0) {
     throw BigIntDivisionByZero();
   }
+  size_t zeroes = std::countr_zero(div);
+  bigint >>= zeroes;
+  div >>= zeroes;
   if (div == 1 || bigint == 0) {
     return bigint;
   }
@@ -294,98 +284,59 @@ UBigInt &operator%=(UBigInt &bigint, uint64_t div) {
   return bigint %= UBigInt(div);
 }
 
-bool operator<(const UBigInt &first, const UBigInt &second) {
+std::strong_ordering operator<=>(const UBigInt &first, const UBigInt &second) noexcept {
   if (&first == &second) {
-    return false;
+    return std::strong_ordering::equivalent;
   }
   if (first.storage_.size() != second.storage_.size()) {
-    return first.storage_.size() < second.storage_.size();
+    return first.storage_.size() <=> second.storage_.size();
   }
   size_t size = first.storage_.size();
   for (size_t i = 0; i < first.storage_.size(); ++i) {
     if (first.storage_[size - i - 1] != second.storage_[size - i - 1]) {
-      return first.storage_[size - i - 1] < second.storage_[size - i - 1];
+      return first.storage_[size - i - 1] <=> second.storage_[size - i - 1];
     }
   }
-  return false;
-}
-bool operator==(const UBigInt &first, const UBigInt &second) {
-  if (&first == &second) {
-    return true;
-  }
-  if (first.storage_.size() != second.storage_.size()) {
-    return false;
-  }
-  size_t size = first.storage_.size();
-  for (size_t i = 0; i < first.storage_.size(); ++i) {
-    if (first.storage_[size - i - 1] != second.storage_[size - i - 1]) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool operator<(const UBigInt &bigint, uint64_t number) {
-  if (bigint.storage_.size() > 2) {
-    return false;
-  }
-  return static_cast<uint64_t>(bigint) < number;
-}
-bool operator>(const UBigInt &bigint, uint64_t number) {
-  if (bigint.storage_.size() > 2) {
-    return true;
-  }
-  return number < static_cast<uint64_t>(bigint);
-}
-bool operator==(const UBigInt &bigint, uint64_t number) {
-  if (bigint.storage_.size() > 2) {
-    return false;
-  }
-  return static_cast<uint64_t>(bigint) == number;
+  return std::strong_ordering::equal;
 }
 
 UBigInt &operator<<=(UBigInt &bigint, size_t shift) {
   if (bigint == 0) {
     return bigint;
   }
-  while (shift >= 32) {
-    bigint.storage_.push_front(0);
-    shift -= 32;
-  }
+  bigint.storage_.insert(bigint.storage_.begin(), shift / 32, 0);
+  shift %= 32;
   if (shift > 0) {
-    bigint *= (1_uint64 << shift);
+    uint32_t carryover = 0;
+    for (size_t i = 0; i < bigint.storage_.size(); i++) {
+      uint64_t shift_64bit = static_cast<uint64_t>(bigint.storage_[i]);
+      shift_64bit <<= shift;
+      bigint.storage_[i] = static_cast<uint32_t>(shift_64bit) | carryover;
+      carryover = static_cast<uint32_t>(shift_64bit >> 32);
+    }
+    if (carryover > 0) {
+      bigint.storage_.push_back(carryover);
+    }
   }
   return bigint;
 }
-UBigInt &operator>>=(UBigInt &bigint, size_t shift) {
+UBigInt &operator>>=(UBigInt &bigint, size_t shift) noexcept {
   if (bigint == 0) {
     return bigint;
   }
-  while (shift >= 32 && !bigint.storage_.empty()) {
-    bigint.storage_.pop_front();
-    shift -= 32;
+  bigint.storage_.erase(bigint.storage_.begin(), bigint.storage_.begin() + (shift / 32));
+  shift %= 32;
+  if (shift > 0 && !bigint.storage_.empty()) {
+    uint32_t carryover = 0;
+    for (size_t i = bigint.storage_.size(); i > 0; i--) {
+      uint64_t shift_64bit = (static_cast<uint64_t>(bigint.storage_[i - 1]) << 32);
+      shift_64bit >>= shift;
+      bigint.storage_[i - 1] = static_cast<uint32_t>(shift_64bit >> 32) | carryover;
+      carryover = static_cast<uint32_t>(shift_64bit);
+    }
   }
-  if (shift > 0) {
-    bigint /= (1_uint64 << shift);
-  }
+  bigint.Shrink();
   return bigint;
-}
-
-UBigInt::operator uint64_t() const {
-  if (storage_.size() == 0) {
-    return 0;
-  }
-  if (storage_.size() == 1) {
-    return storage_[0];
-  }
-  return (static_cast<uint64_t>(storage_[1]) << 32) + static_cast<uint64_t>(storage_[0]);
-}
-
-UBigInt::operator uint32_t() const {
-  if (storage_.size() == 0) {
-    return 0;
-  }
-  return storage_[0];
 }
 
 UBigInt Power(const UBigInt &base, size_t power) {
@@ -531,16 +482,7 @@ std::string UBigInt::Exact() const {
   return buffer;
 }
 
-void UBigInt::Shrink() noexcept {
-  while (!storage_.empty() && storage_.back() == 0u) {
-    storage_.pop_back();
-  }
-  if (storage_.max_size() > (storage_.size() * 8)) {
-    storage_.shrink_to_fit();
-  }
-}
-
-UBigInt::Approximation UBigInt::GetApproximation() const {
+UBigInt::Approximation UBigInt::GetApproximation() const noexcept {
   if (storage_.size() == 0) {
     return {0, 0};
   }
@@ -564,7 +506,7 @@ UBigInt::Approximation UBigInt::GetApproximation() const {
     size_t shift = 31 - (power_of_2 % 32);
     mult *= static_cast<long double>((static_cast<uint64_t>(storage_.back()) << (32 + shift)) +
                                      (static_cast<uint64_t>(storage_[storage_.size() - 2]) << shift) +
-                                     static_cast<uint64_t>(storage_[storage_.size() - 3] >> (32 - shift))) /
+                                     (static_cast<uint64_t>(storage_[storage_.size() - 3]) >> (32 - shift))) /
             static_cast<long double>(1_uint64 << 63);
   }
   if (mult >= 10 - 5e-12) {

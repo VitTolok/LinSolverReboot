@@ -3,7 +3,7 @@
 #include <sstream>
 
 template <class First, class Second, bool Plain = false>
-inline std::unique_ptr<Solution> HandleSum(const MatAriSolvable *ptr, First &first, Second &second) {
+inline std::unique_ptr<Solution> HandleSum(First &first, Second &second) {
   if constexpr (!Addable<First, Second>) {
     throw InvalidMatrixOperation{};
   } else {
@@ -17,7 +17,7 @@ inline std::unique_ptr<Solution> HandleSum(const MatAriSolvable *ptr, First &fir
   }
 }
 template <class First, class Second, bool Plain = false>
-inline std::unique_ptr<Solution> HandleSub(const MatAriSolvable *ptr, First &first, Second &second) {
+inline std::unique_ptr<Solution> HandleSub(First &first, Second &second) {
   if constexpr (!Subtractable<First, Second>) {
     throw InvalidMatrixOperation{};
   } else {
@@ -31,7 +31,7 @@ inline std::unique_ptr<Solution> HandleSub(const MatAriSolvable *ptr, First &fir
   }
 }
 template <class First, class Second, bool Plain = false>
-inline std::unique_ptr<Solution> HandleMult(const MatAriSolvable *ptr, First &first, Second &second) {
+inline std::unique_ptr<Solution> HandleMult(First &first, Second &second) {
   if constexpr (!Multipliable<First, Second>) {
     throw InvalidMatrixOperation{};
   } else {
@@ -45,7 +45,7 @@ inline std::unique_ptr<Solution> HandleMult(const MatAriSolvable *ptr, First &fi
   }
 }
 template <class First, class Second, bool Plain = false>
-inline std::unique_ptr<Solution> HandleDiv(const MatAriSolvable *ptr, First &first, Second &second) {
+inline std::unique_ptr<Solution> HandleDiv(First &first, Second &second) {
   if constexpr (!Divisible<First, Second>) {
     throw InvalidMatrixOperation{};
   } else {
@@ -59,7 +59,7 @@ inline std::unique_ptr<Solution> HandleDiv(const MatAriSolvable *ptr, First &fir
   }
 }
 template <class First, class Second, bool Plain = false>
-inline std::unique_ptr<Solution> HandleMod(const MatAriSolvable *ptr, First &first, Second &second) {
+inline std::unique_ptr<Solution> HandleMod(First &first, Second &second) {
   if constexpr (!Moddable<First, Second>) {
     throw InvalidMatrixOperation{};
   } else {
@@ -81,19 +81,19 @@ inline std::unique_ptr<Solution> HandleOperator(const MatAriSolvable *ptr) {
   std::istringstream(ptr->second) >> second;
   switch (ptr->operator_type) {
     case OperatorType::kAdd:
-      return HandleSum<First, Second, Plain>(ptr, first, second);
+      return HandleSum<First, Second, Plain>(first, second);
       break;
     case OperatorType::kSub:
-      return HandleSub<First, Second, Plain>(ptr, first, second);
+      return HandleSub<First, Second, Plain>(first, second);
       break;
     case OperatorType::kMul:
-      return HandleMult<First, Second, Plain>(ptr, first, second);
+      return HandleMult<First, Second, Plain>(first, second);
       break;
     case OperatorType::kDiv:
-      return HandleDiv<First, Second, Plain>(ptr, first, second);
+      return HandleDiv<First, Second, Plain>(first, second);
       break;
     case OperatorType::kMod:
-      return HandleMod<First, Second, Plain>(ptr, first, second);
+      return HandleMod<First, Second, Plain>(first, second);
       break;
     default:
       throw MachineError{};
