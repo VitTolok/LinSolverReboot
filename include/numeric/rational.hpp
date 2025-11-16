@@ -259,7 +259,7 @@ inline Rational operator/(ORationalA &&first, ORationalB &&second) {
   if constexpr (std::is_rvalue_reference_v<decltype(first)>) {
     return std::move(first /= second);
   } else if constexpr (std::is_rvalue_reference_v<decltype(second)>) {
-    return std::move(1 / std::move(second /= first));
+    return 1 / std::move(second /= first);
   } else {
     Rational copy(first);
     return std::move(copy /= second);
@@ -313,7 +313,7 @@ inline Rational operator/(ORational &&rational, Integer &&integer) {
   if constexpr (std::is_rvalue_reference_v<decltype(rational)>) {
     return std::move(rational /= integer);
   } else if constexpr (std::is_rvalue_reference_v<decltype(integer)>) {
-    return std::move(rational / Rational(std::move(integer)));
+    return rational / Rational(std::move(integer));
   } else {
     Rational copy(rational);
     return std::move(copy /= integer);
@@ -349,7 +349,7 @@ inline Rational operator/(Integer &&integer, ORational &&rational) {
     throw InvalidRational{};
   }
   Rational inverse = std::forward<ORational>(rational) / std::forward<Integer>(integer);
-  std::swap(rational.num_.Abs(), inverse.den_);
+  std::swap(inverse.num_.Abs(), inverse.den_);
   return inverse;
 }
 template <OnlyRational ORational, SomeInt Integer>
