@@ -4,6 +4,7 @@
 #include "BigInt.hpp"
 #include <cstdint>
 #include <iostream>
+#include <compare>
 
 class InvalidRational : public MachineError {
  private:

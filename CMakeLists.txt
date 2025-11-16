@@ -6,8 +6,11 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  add_compile_options(-fsanitize=address,undefined,leak)
+  add_compile_options(-fsanitize=address,undefined,leak -O0)
   add_link_options(-fsanitize=address,undefined,leak)
+endif()
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  add_compile_options(-O3)
 endif()
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
