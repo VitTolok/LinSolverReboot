@@ -27,7 +27,11 @@
        <widget class="QComboBox" name="type_choice_2"/>
       </item>
       <item row="0" column="4">
-       <widget class="QTextBrowser" name="text_browser_result"/>
+       <widget class="QTextBrowser" name="text_browser_result">
+        <property name="styleSheet">
+         <string notr="true">font: 700 oblique 12pt &quot;DejaVu Sans Mono&quot;;</string>
+        </property>
+       </widget>
       </item>
       <item row="0" column="1">
        <widget class="QComboBox" name="operator_choice"/>
@@ -71,10 +75,18 @@
        </widget>
       </item>
       <item row="0" column="0">
-       <widget class="QPlainTextEdit" name="text_edit_1"/>
+       <widget class="QPlainTextEdit" name="text_edit_1">
+        <property name="styleSheet">
+         <string notr="true">font: 700 oblique 12pt &quot;DejaVu Sans Mono&quot;;</string>
+        </property>
+       </widget>
       </item>
       <item row="0" column="2">
-       <widget class="QPlainTextEdit" name="text_edit_2"/>
+       <widget class="QPlainTextEdit" name="text_edit_2">
+        <property name="styleSheet">
+         <string notr="true">font: 700 oblique 12pt &quot;DejaVu Sans Mono&quot;;</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

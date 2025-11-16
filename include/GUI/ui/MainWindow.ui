@@ -19,6 +19,9 @@
   <property name="windowTitle">
    <string>Linear Solver - prototype</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">font: 12pt &quot;Sans Serif&quot;;</string>
+  </property>
   <property name="toolButtonStyle">
    <enum>Qt::ToolButtonIconOnly</enum>
   </property>
@@ -53,7 +56,7 @@
          <x>0</x>
          <y>0</y>
          <width>298</width>
-         <height>533</height>
+         <height>528</height>
         </rect>
        </property>
       </widget>
@@ -67,7 +70,7 @@
      <x>0</x>
      <y>0</y>
      <width>909</width>
-     <height>19</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuinterface">
