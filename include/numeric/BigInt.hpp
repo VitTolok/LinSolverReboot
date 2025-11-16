@@ -3,7 +3,7 @@
 
 class BigInt {
  public:
-  BigInt() : pos_(false), abs_() {
+  BigInt() : abs_(), pos_(false) {
   }
   template <std::integral Sub64Int>
   explicit BigInt(Sub64Int integer) : BigInt() {
@@ -11,23 +11,25 @@ class BigInt {
   }
   BigInt(const BigInt &) = default;
   BigInt(BigInt &&) noexcept = default;
-  explicit BigInt(const UBigInt &bigint) : pos_(true), abs_(bigint) {
+  explicit BigInt(const UBigInt &bigint) : abs_(bigint), pos_(true) {
   }
-  explicit BigInt(UBigInt &&bigint) noexcept : pos_(true), abs_(std::move(bigint)) {
+  explicit BigInt(UBigInt &&bigint) noexcept : abs_(std::move(bigint)), pos_(true) {
   }
 
   BigInt &operator=(const BigInt &) = default;
   BigInt &operator=(BigInt &&) noexcept = default;
   template <std::integral Sub64Int>
   BigInt &operator=(Sub64Int integer) {
-    if (integer < 0) {
-      pos_ = false;
-      if (integer == std::numeric_limits<int64_t>::min()) {
-        abs_ = static_cast<uint64_t>(1_uint64 << 63);
-      } else {
-        abs_ = static_cast<uint64_t>(-static_cast<int64_t>(integer));
+    if constexpr (std::is_signed_v<Sub64Int>) {
+      if (integer < 0) {
+        pos_ = false;
+        if (integer == std::numeric_limits<int64_t>::min()) {
+          abs_ = static_cast<uint64_t>(1_uint64 << 63);
+        } else {
+          abs_ = static_cast<uint64_t>(-static_cast<int64_t>(integer));
+        }
+        return *this;
       }
-      return *this;
     }
     pos_ = true;
     abs_ = static_cast<uint64_t>(integer);
@@ -250,12 +252,12 @@ inline BigInt &operator>>=(BigInt &bigint, size_t shift) noexcept {
 inline BigInt operator<<(const BigInt &bigint, size_t shift) {
   BigInt copy = bigint;
   copy.abs_ <<= shift;
-  return std::move(copy);
+  return copy;
 }
 inline BigInt operator>>(const BigInt &bigint, size_t shift) {
   BigInt copy = bigint;
   copy.abs_ >>= shift;
-  return std::move(copy);
+  return copy;
 }
 inline BigInt operator<<(BigInt &&bigint, size_t shift) {
   bigint.abs_ <<= shift;
@@ -312,7 +314,7 @@ inline bool operator==(const BigInt &first, const UBigInt &second) noexcept {
 inline BigInt operator-(const BigInt &bigint) {
   BigInt copy(bigint);
   copy.pos_ = !copy.pos_;
-  return std::move(copy);
+  return copy;
 }
 inline BigInt operator-(BigInt &&bigint) noexcept {
   bigint.pos_ = !bigint.pos_;
@@ -604,7 +606,7 @@ inline BigInt operator%(BigInt &&first, const BigInt &second) {
   return std::move(first %= second);
 }
 inline BigInt operator%(const BigInt &first, BigInt &&second) {
-  return std::move(second % first);
+  return second % first;
 }
 inline BigInt operator%(BigInt &&first, BigInt &&second) {
   return std::move(first %= second);
@@ -708,7 +710,7 @@ inline BigInt operator+(const UBigInt &first, const BigInt &second) {
   return std::move(copy += first);
 }
 inline BigInt operator+(UBigInt &&first, const BigInt &second) {
-  return std::move(BigInt(std::move(first)) + second);
+  return BigInt(std::move(first)) + second;
 }
 inline BigInt operator+(const UBigInt &first, BigInt &&second) {
   return std::move(second += first);
@@ -721,7 +723,7 @@ inline BigInt operator-(const UBigInt &first, const BigInt &second) {
   return std::move((copy -= first) *= -1);
 }
 inline BigInt operator-(UBigInt &&first, const BigInt &second) {
-  return std::move(BigInt(std::move(first)) - second);
+  return BigInt(std::move(first)) - second;
 }
 inline BigInt operator-(const UBigInt &first, BigInt &&second) {
   return std::move((second -= first) *= -1);
@@ -737,7 +739,7 @@ inline BigInt operator*(const UBigInt &first, const BigInt &second) {
   return std::move(copy *= second);
 }
 inline BigInt operator*(UBigInt &&first, const BigInt &second) {
-  return std::move(BigInt(std::move(first)) * second);
+  return BigInt(std::move(first)) * second;
 }
 inline BigInt operator*(const UBigInt &first, BigInt &&second) {
   return std::move(second *= first);
@@ -759,13 +761,13 @@ inline BigInt operator/(const UBigInt &first, const BigInt &second) {
   return std::move(copy /= second);
 }
 inline BigInt operator/(UBigInt &&first, const BigInt &second) {
-  return std::move(BigInt(std::move(first)) / second);
+  return BigInt(std::move(first)) / second;
 }
 inline BigInt operator/(const UBigInt &first, BigInt &&second) {
-  return std::move(first / second);
+  return first / second;
 }
 inline BigInt operator/(UBigInt &&first, BigInt &&second) {
-  return std::move(BigInt(std::move(first)) / second);
+  return BigInt(std::move(first)) / second;
 }
 inline BigInt operator%(const UBigInt &first, const BigInt &second) {
   if (second.Abs() == 0) {
@@ -778,22 +780,30 @@ inline BigInt operator%(const UBigInt &first, const BigInt &second) {
   return std::move(copy %= second);
 }
 inline BigInt operator%(UBigInt &&first, const BigInt &second) {
-  return std::move(BigInt(std::move(first)) % second);
+  return BigInt(std::move(first)) % second;
 }
 inline BigInt operator%(const UBigInt &first, BigInt &&second) {
-  return std::move(first % second);
+  return first % second;
 }
 inline BigInt operator%(UBigInt &&first, BigInt &&second) {
-  return std::move(BigInt(std::move(first)) % second);
+  return BigInt(std::move(first)) % second;
 }
 
 template <std::integral Sub64Int>
 inline std::strong_ordering operator<=>(const BigInt &bigint, Sub64Int integer) noexcept {
-  if (!bigint.pos_ && bigint.Abs() > 0) {
-    if (integer == std::numeric_limits<int64_t>::min()) {
-      return 0 <=> (bigint.Abs() <=> (1_uint64 << 63));
+  if constexpr (std::is_signed_v<Sub64Int>) {
+    if (integer < 0) {
+      if (bigint.pos_ || bigint.Abs() == 0) {
+        return std::strong_ordering::greater;
+      }
+      if (integer == std::numeric_limits<int64_t>::min()) {
+        return (1_uint64 << 63) <=> bigint.Abs();
+      }
+      return (-integer) <=> bigint.Abs();
     }
-    return 0 <=> (bigint.Abs() <=> -integer);
+  }
+  if (!bigint.pos_ && bigint.Abs() > 0) {
+    return std::strong_ordering::less;
   }
   return bigint.Abs() <=> integer;
 }
