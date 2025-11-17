@@ -9,7 +9,7 @@
 #include <bit>
 
 UBigInt &operator+=(UBigInt &first, const UBigInt &second) {
-  if (first == 0) {
+  if (first == 0) [[likely]] {
     return first = second;
   }
   first.storage_.resize(std::max(first.storage_.size(), second.storage_.size()), 0u);
@@ -17,10 +17,10 @@ UBigInt &operator+=(UBigInt &first, const UBigInt &second) {
   for (size_t i = 0; i < second.storage_.size(); ++i) {
     uint64_t sum = static_cast<uint64_t>(first.storage_[i]) + static_cast<uint64_t>(second.storage_[i]) +
                    static_cast<uint64_t>(carryover);
-    first.storage_[i] = static_cast<uint32_t>(sum % (1_uint64 << 32));
+    first.storage_[i] = static_cast<uint32_t>(sum);
     carryover = static_cast<uint32_t>(sum >> 32);
   }
-  if (carryover > 0u) {
+  if (carryover > 0u) [[unlikely]] {
     for (size_t i = second.storage_.size(); carryover > 0u; ++i) {
       while (i >= first.storage_.size()) {
         first.storage_.push_back(0u);
@@ -35,54 +35,54 @@ UBigInt &operator+=(UBigInt &first, const UBigInt &second) {
 }
 
 UBigInt &operator-=(UBigInt &first, const UBigInt &second) {
-  if (&first == &second || first == second) {
+  if (&first == &second || first == second) [[likely]] {
     return first = 0;
   }
-  if (first < second) {
+  if (first < second) [[unlikely]] {
     throw UBigIntUnderflow();
   }
-  if (first <= std::numeric_limits<uint64_t>::max() && second <= std::numeric_limits<uint64_t>::max()) {
+  if (first.storage_.size() <= 2 && second.storage_.size() <= 2) [[likely]] {
     return first = static_cast<uint64_t>(first) - static_cast<uint64_t>(second);
   }
   uint32_t debt = 0u;
   for (size_t i = 0; i < second.storage_.size(); ++i) {
     uint64_t available = static_cast<uint64_t>(first.storage_[i]);
     uint64_t subtracted = static_cast<uint64_t>(second.storage_[i]) + static_cast<uint64_t>(debt);
-    if (available >= subtracted) {
+    if (available >= subtracted) [[likely]] {
       first.storage_[i] -= second.storage_[i] + debt;
       debt = 0u;
       continue;
     }
     debt = 1u;
-    first.storage_[i] = static_cast<uint32_t>((available + (1_uint64 << 32)) - subtracted);
+    first.storage_[i] = static_cast<uint32_t>((available | (1_uint64 << 32)) - subtracted);
   }
   for (size_t i = second.storage_.size(); debt > 0 && i < first.storage_.size(); i++) {
-    if (first.storage_[i] >= debt) {
+    if (first.storage_[i] >= debt) [[likely]] {
       first.storage_[i] -= debt;
       break;
     }
-    first.storage_[i] = (1_uint64 << 32) + static_cast<uint64_t>(first.storage_[i]) - debt;
+    first.storage_[i] = ((1_uint64 << 32) | static_cast<uint64_t>(first.storage_[i])) - debt;
   }
   first.Shrink();
   return first;
 }
 
 UBigInt &operator*=(UBigInt &first, const UBigInt &second) {
-  if (first == 0 || second == 0) {
+  if (first == 0 || second == 0) [[likely]] {
     return first = 0;
   }
-  if (&first == &second) {
+  if (&first == &second) [[unlikely]] {
     UBigInt copy = second;
     return first *= copy;
   }
-  if (second <= std::numeric_limits<uint64_t>::max()) {
+  if (second.storage_.size() <= 2) [[likely]] {
     return first *= static_cast<uint64_t>(second);
   }
   UBigInt buffer(0);
   for (size_t i = 0; i < first.storage_.size(); ++i) {
     buffer += second * first.storage_[i];
     first.storage_[i] = buffer > 0 ? buffer.storage_[0] : 0;
-    if (!buffer.storage_.empty()) {
+    if (!buffer.storage_.empty()) [[likely]] {
       buffer.storage_.pop_front();
     }
   }
@@ -94,10 +94,10 @@ UBigInt &operator*=(UBigInt &first, const UBigInt &second) {
 }
 
 inline uint32_t InPlaceBigDiv(UBigInt &remainder, const UBigInt &div) {
-  if (remainder < div) {
+  if (remainder < div) [[likely]] {
     return 0;
   }
-  if (remainder == div) {
+  if (remainder == div) [[unlikely]] {
     remainder = 0;
     return 1;
   }
@@ -105,7 +105,7 @@ inline uint32_t InPlaceBigDiv(UBigInt &remainder, const UBigInt &div) {
   auto div_approx = div.GetApproximation();
   uint32_t result = rem_approx.multiplier / div_approx.multiplier * powl(10, rem_approx.power - div_approx.power);
   remainder -= (div * result);
-  if (remainder >= div) {
+  if (remainder >= div) [[unlikely]] {
     ++result;
     remainder -= div;
   }
@@ -113,17 +113,17 @@ inline uint32_t InPlaceBigDiv(UBigInt &remainder, const UBigInt &div) {
 }
 
 UBigInt &operator/=(UBigInt &first, const UBigInt &second) {
-  if (&first == &second || first == second) {
+  if (&first == &second || first == second) [[likely]] {
     return first = 1;
   }
-  if (first < second) {
+  if (first < second) [[likely]] {
     first = 0;
     return first;
   }
-  if (first <= std::numeric_limits<uint64_t>::max() && second <= std::numeric_limits<uint64_t>::max()) {
+  if (first.storage_.size() <= 2 && second.storage_.size() <= 2) [[likely]] {
     return first = static_cast<uint64_t>(first) / static_cast<uint64_t>(second);
   }
-  if (second < (1_uint64 << 32)) {
+  if (second.storage_.size() <= 1) [[likely]] {
     return first /= static_cast<uint32_t>(second);
   }
   UBigInt remainder;
@@ -136,13 +136,13 @@ UBigInt &operator/=(UBigInt &first, const UBigInt &second) {
 }
 
 UBigInt &operator%=(UBigInt &first, const UBigInt &second) {
-  if (&first == &second || first == second) {
+  if (&first == &second || first == second) [[likely]] {
     return first = 0;
   }
-  if (first <= std::numeric_limits<uint64_t>::max() && second <= std::numeric_limits<uint64_t>::max()) {
+  if (first <= std::numeric_limits<uint64_t>::max() && second <= std::numeric_limits<uint64_t>::max()) [[likely]] {
     return first = static_cast<uint64_t>(first) % static_cast<uint64_t>(second);
   }
-  if (second < (1_uint64 << 32)) {
+  if (second < (1_uint64 << 32)) [[likely]] {
     return first %= static_cast<uint32_t>(second);
   }
   UBigInt remainder;
@@ -154,17 +154,17 @@ UBigInt &operator%=(UBigInt &first, const UBigInt &second) {
 }
 
 UBigInt &operator+=(UBigInt &bigint, uint64_t number) {
-  if (bigint == 0) {
+  if (bigint == 0) [[likely]] {
     return bigint = number;
   }
-  if (number < (1_uint64 << 32)) {
+  if (number < (1_uint64 << 32)) [[likely]] {
     uint32_t carryover = static_cast<uint32_t>(number);
     for (size_t pos = 0; pos < bigint.storage_.size() && carryover > 0; ++pos) {
       uint64_t sum = static_cast<uint64_t>(bigint.storage_[pos]) + static_cast<uint64_t>(carryover);
-      bigint.storage_[pos] = static_cast<uint32_t>(sum % (1_uint64 << 32));
+      bigint.storage_[pos] = static_cast<uint32_t>(sum);
       carryover = static_cast<uint32_t>(sum >> 32);
     }
-    if (carryover > 0) {
+    if (carryover > 0) [[unlikely]] {
       bigint.storage_.push_back(carryover);
     }
     return bigint;
@@ -173,23 +173,23 @@ UBigInt &operator+=(UBigInt &bigint, uint64_t number) {
   bigint.storage_.pop_front();
   bigint += (number >> 32);
   bigint.storage_.push_front(head);
-  return bigint += (number % (1_uint64 << 32));
+  return bigint += (number & ((1_uint64 << 32) - 1));
 }
 
 UBigInt &operator-=(UBigInt &bigint, uint64_t number) {
-  if (number == 0) {
+  if (number == 0) [[likely]] {
     return bigint;
   }
-  if (bigint < number) {
+  if (bigint < number) [[unlikely]] {
     throw UBigIntUnderflow();
   }
-  if (bigint <= std::numeric_limits<uint64_t>::max()) {
+  if (bigint.storage_.size() <= 2) [[likely]] {
     return bigint = static_cast<uint64_t>(bigint) - number;
   }
-  if (number < (1_uint64 << 32)) {
+  if (number < (1_uint64 << 32)) [[likely]] {
     uint32_t debt = static_cast<uint32_t>(number);
     for (size_t pos = 0;; ++pos) {
-      if (bigint.storage_[pos] >= debt) {
+      if (bigint.storage_[pos] >= debt) [[likely]] {
         bigint.storage_[pos] -= debt;
         break;
       }
@@ -207,23 +207,23 @@ UBigInt &operator-=(UBigInt &bigint, uint64_t number) {
 }
 
 UBigInt &operator*=(UBigInt &bigint, uint64_t number) {
-  if (number == 0) {
+  if (number == 0) [[likely]] {
     return bigint = 0;
   }
   size_t zeroes = std::countr_zero(number);
   bigint <<= zeroes;
   number >>= zeroes;
-  if (bigint == 0 || number == 1) {
+  if (bigint == 0 || number == 1) [[likely]] {
     return bigint;
   }
-  if (number < (1_uint64 << 32)) {
+  if (number < (1_uint64 << 32)) [[likely]] {
     uint32_t carryover = 0;
     for (size_t pos = 0; pos < bigint.storage_.size(); ++pos) {
       uint64_t prod = static_cast<uint64_t>(bigint.storage_[pos]) * number + static_cast<uint64_t>(carryover);
       bigint.storage_[pos] = static_cast<uint32_t>(prod % (1_uint64 << 32));
       carryover = static_cast<uint32_t>(prod >> 32);
     }
-    if (carryover > 0) {
+    if (carryover > 0) [[unlikely]] {
       bigint.storage_.push_back(carryover);
     }
     return bigint;
@@ -237,19 +237,19 @@ UBigInt &operator*=(UBigInt &bigint, uint64_t number) {
 }
 
 UBigInt &operator/=(UBigInt &bigint, uint64_t div) {
-  if (div == 0) {
+  if (div == 0) [[unlikely]] {
     throw BigIntDivisionByZero();
   }
   size_t zeroes = std::countr_zero(div);
   bigint >>= zeroes;
   div >>= zeroes;
-  if (div == 1 || bigint == 0) {
+  if (div == 1 || bigint == 0) [[likely]] {
     return bigint;
   }
-  if (bigint <= std::numeric_limits<uint64_t>::max()) {
+  if (bigint.storage_.size() <= 2) [[likely]] {
     return bigint = static_cast<uint64_t>(bigint) / div;
   }
-  if (div < (1_uint64 << 32)) {
+  if (div < (1_uint64 << 32)) [[likely]] {
     uint32_t remainder = 0;
     for (size_t i = 0; i < bigint.storage_.size(); ++i) {
       uint64_t num = static_cast<uint64_t>(bigint.storage_[bigint.storage_.size() - i - 1]) +
@@ -263,19 +263,19 @@ UBigInt &operator/=(UBigInt &bigint, uint64_t div) {
   return bigint /= UBigInt(div);
 }
 UBigInt &operator%=(UBigInt &bigint, uint64_t div) {
-  if (div == 0) {
+  if (div == 0) [[unlikely]] {
     throw BigIntDivisionByZero();
   }
-  if (div == 1 || bigint == 0) {
+  if (div == 1 || bigint == 0) [[likely]] {
     return bigint = 0;
   }
-  if (bigint <= std::numeric_limits<uint64_t>::max()) {
+  if (bigint.storage_.size() <= 2) [[likely]] {
     return bigint = static_cast<uint64_t>(bigint) % div;
   }
-  if (div < (1_uint64 << 32)) {
+  if (div < (1_uint64 << 32)) [[likely]] {
     uint32_t remainder = 0;
     for (size_t i = 0; i < bigint.storage_.size(); ++i) {
-      uint64_t num = static_cast<uint64_t>(bigint.storage_[bigint.storage_.size() - i - 1]) +
+      uint64_t num = static_cast<uint64_t>(bigint.storage_[bigint.storage_.size() - i - 1]) |
                      (static_cast<uint64_t>(remainder) << 32);
       remainder = static_cast<uint32_t>(num % div);
     }
@@ -284,16 +284,16 @@ UBigInt &operator%=(UBigInt &bigint, uint64_t div) {
   return bigint %= UBigInt(div);
 }
 
-std::strong_ordering operator<=>(const UBigInt &first, const UBigInt &second) noexcept {
-  if (&first == &second) {
+[[nodiscard]] std::strong_ordering operator<=>(const UBigInt &first, const UBigInt &second) noexcept {
+  if (&first == &second) [[unlikely]] {
     return std::strong_ordering::equivalent;
   }
-  if (first.storage_.size() != second.storage_.size()) {
+  if (first.storage_.size() != second.storage_.size()) [[likely]] {
     return first.storage_.size() <=> second.storage_.size();
   }
   size_t size = first.storage_.size();
   for (size_t i = 0; i < first.storage_.size(); ++i) {
-    if (first.storage_[size - i - 1] != second.storage_[size - i - 1]) {
+    if (first.storage_[size - i - 1] != second.storage_[size - i - 1]) [[likely]] {
       return first.storage_[size - i - 1] <=> second.storage_[size - i - 1];
     }
   }
@@ -301,12 +301,12 @@ std::strong_ordering operator<=>(const UBigInt &first, const UBigInt &second) no
 }
 
 UBigInt &operator<<=(UBigInt &bigint, size_t shift) {
-  if (bigint == 0) {
+  if (bigint == 0) [[unlikely]] {
     return bigint;
   }
   bigint.storage_.insert(bigint.storage_.begin(), shift / 32, 0);
   shift %= 32;
-  if (shift > 0) {
+  if (shift > 0) [[likely]] {
     uint32_t carryover = 0;
     for (size_t i = 0; i < bigint.storage_.size(); i++) {
       uint64_t shift_64bit = static_cast<uint64_t>(bigint.storage_[i]);
@@ -314,19 +314,19 @@ UBigInt &operator<<=(UBigInt &bigint, size_t shift) {
       bigint.storage_[i] = static_cast<uint32_t>(shift_64bit) | carryover;
       carryover = static_cast<uint32_t>(shift_64bit >> 32);
     }
-    if (carryover > 0) {
+    if (carryover > 0) [[unlikely]] {
       bigint.storage_.push_back(carryover);
     }
   }
   return bigint;
 }
 UBigInt &operator>>=(UBigInt &bigint, size_t shift) noexcept {
-  if (bigint == 0) {
+  if (bigint == 0) [[unlikely]] {
     return bigint;
   }
   bigint.storage_.erase(bigint.storage_.begin(), bigint.storage_.begin() + (shift / 32));
   shift %= 32;
-  if (shift > 0 && !bigint.storage_.empty()) {
+  if (shift > 0 && !bigint.storage_.empty()) [[unlikely]] {
     uint32_t carryover = 0;
     for (size_t i = bigint.storage_.size(); i > 0; i--) {
       uint64_t shift_64bit = (static_cast<uint64_t>(bigint.storage_[i - 1]) << 32);
@@ -339,18 +339,18 @@ UBigInt &operator>>=(UBigInt &bigint, size_t shift) noexcept {
   return bigint;
 }
 
-UBigInt Power(const UBigInt &base, size_t power) {
+[[nodiscard]] UBigInt Power(const UBigInt &base, size_t power) {
   switch (power) {
     case 0:
-      return UBigInt(1);
+      [[likely]] return UBigInt(1);
     case 1:
-      return base;
+      [[likely]] return base;
     case 2:
-      return base * base;
+      [[likely]] return base * base;
   }
   static std::map<UBigInt, std::vector<UBigInt>> powers;
   auto location = powers.emplace(base, std::vector<UBigInt>(1, base)).first;
-  while ((1_uint64 << location->second.size()) <= power) {
+  while ((1_uint64 << location->second.size()) <= power) [[unlikely]] {
     location->second.push_back(location->second.back() * location->second.back());
   }
   UBigInt result(1);
@@ -363,20 +363,20 @@ UBigInt Power(const UBigInt &base, size_t power) {
   return result;
 }
 
-UBigInt GCD(const UBigInt &first, const UBigInt &second) {
-  if (first == second) {
+[[nodiscard]] UBigInt GCD(const UBigInt &first, const UBigInt &second) {
+  if (first == second) [[likely]] {
     return first;
   }
-  if (first == 1 || second == 1) {
+  if (first == 1 || second == 1) [[likely]] {
     return UBigInt(1);
   }
-  if (first == 0) {
+  if (first == 0) [[likely]] {
     return second;
   }
-  if (second == 0) {
+  if (second == 0) [[likely]] {
     return first;
   }
-  if (first <= std::numeric_limits<uint64_t>::max() && second <= std::numeric_limits<uint64_t>::max()) {
+  if (first <= std::numeric_limits<uint64_t>::max() && second <= std::numeric_limits<uint64_t>::max()) [[likely]] {
     return UBigInt(std::gcd(static_cast<uint64_t>(first), static_cast<uint64_t>(second)));
   }
   UBigInt f = first;
@@ -389,9 +389,9 @@ UBigInt GCD(const UBigInt &first, const UBigInt &second) {
       power_of_2++;
       f >>= 1;
       s >>= 1;
-    } else if (f_mod2 == 0) {
+    } else if (f_mod2 == 0) [[likely]] {
       f >>= 1;
-    } else if (s_mod2 == 0) {
+    } else if (s_mod2 == 0) [[likely]] {
       s >>= 1;
     } else {
       const_cast<UBigInt &>(std::max(f, s)) -= std::min(f, s);
@@ -401,11 +401,11 @@ UBigInt GCD(const UBigInt &first, const UBigInt &second) {
 }
 
 std::ostream &operator<<(std::ostream &out, const UBigInt &bigint) {
-  if (bigint < 1'000'000) {
+  if (bigint < 1'000'000) [[likely]] {
     return out << static_cast<uint32_t>(bigint);
   }
   auto approx = bigint.GetApproximation();
-  if (approx.multiplier >= 10 - 5e-6) {
+  if (approx.multiplier >= 10 - 5e-6) [[unlikely]] {
     approx.multiplier = 1;
     ++approx.power;
   }
@@ -471,10 +471,14 @@ std::istream &operator>>(std::istream &in, UBigInt &bigint) {
   return in;
 }
 
-std::string UBigInt::Exact() const {
+[[nodiscard]] std::string UBigInt::Exact() const {
   std::string buffer;
+  if (*this == 0) [[likely]] {
+    buffer.push_back('0');
+    return buffer;
+  }
   UBigInt copy = *this;
-  while (copy > 0) {
+  while (copy > 0) [[likely]] {
     buffer.push_back('0' + static_cast<uint32_t>(copy % 10));
     copy /= 10;
   }
@@ -482,8 +486,8 @@ std::string UBigInt::Exact() const {
   return buffer;
 }
 
-UBigInt::Approximation UBigInt::GetApproximation() const noexcept {
-  if (storage_.size() == 0) {
+[[nodiscard]] UBigInt::Approximation UBigInt::GetApproximation() const noexcept {
+  if (storage_.size() == 0) [[likely]] {
     return {0, 0};
   }
   static const long double kPowerRatio = log2l(10);
@@ -497,19 +501,19 @@ UBigInt::Approximation UBigInt::GetApproximation() const noexcept {
   const long double raw = static_cast<long double>(power_of_2) / kPowerRatio;
   size_t power_of_10 = static_cast<size_t>(raw);
   long double mult = powl(10, raw - static_cast<long double>(power_of_10));
-  if (storage_.size() == 1) {
+  if (storage_.size() == 1) [[likely]] {
     mult *= static_cast<long double>(storage_[0]) / static_cast<long double>(1_uint64 << power_of_2);
-  } else if (storage_.size() == 2) {
-    mult *= static_cast<long double>((static_cast<uint64_t>(storage_[1]) << 32) + storage_[0]) /
+  } else if (storage_.size() == 2) [[likely]] {
+    mult *= static_cast<long double>((static_cast<uint64_t>(storage_[1]) << 32) | storage_[0]) /
             static_cast<long double>(1_uint64 << power_of_2);
   } else {
     size_t shift = 31 - (power_of_2 % 32);
-    mult *= static_cast<long double>((static_cast<uint64_t>(storage_.back()) << (32 + shift)) +
-                                     (static_cast<uint64_t>(storage_[storage_.size() - 2]) << shift) +
+    mult *= static_cast<long double>((static_cast<uint64_t>(storage_.back()) << (32 + shift)) |
+                                     (static_cast<uint64_t>(storage_[storage_.size() - 2]) << shift) |
                                      (static_cast<uint64_t>(storage_[storage_.size() - 3]) >> (32 - shift))) /
             static_cast<long double>(1_uint64 << 63);
   }
-  if (mult >= 10 - 5e-12) {
+  if (mult >= 10 - 5e-12) [[unlikely]] {
     ++power_of_10;
     mult /= 10;
   }
