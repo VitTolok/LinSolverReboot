@@ -4,3 +4,4 @@ lib
 bin
 test/handtest.cpp
 QtConfig.pro.user
+.cache
