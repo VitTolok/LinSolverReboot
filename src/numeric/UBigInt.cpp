@@ -93,8 +93,8 @@ UBigInt &operator*=(UBigInt &first, const UBigInt &second) {
   return first;
 }
 
-inline uint32_t InPlaceBigDiv(UBigInt &remainder, const UBigInt &div) {
-  if (remainder < div) [[likely]] {
+inline static uint32_t InPlaceBigDiv(UBigInt &remainder, const UBigInt &div) {
+  if (remainder < div) {
     return 0;
   }
   if (remainder == div) [[unlikely]] {
