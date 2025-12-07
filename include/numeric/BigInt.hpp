@@ -1,3 +1,4 @@
+#pragma once
 #include "UBigInt.hpp"
 #include <sstream>
 

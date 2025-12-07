@@ -93,8 +93,8 @@ UBigInt &operator*=(UBigInt &first, const UBigInt &second) {
   return first;
 }
 
-uint32_t InPlaceBigDiv(UBigInt &remainder, const UBigInt &div) {
-  if (remainder < div) [[likely]] {
+inline static uint32_t InPlaceBigDiv(UBigInt &remainder, const UBigInt &div) {
+  if (remainder < div) {
     return 0;
   }
   if (remainder == div) [[unlikely]] {
@@ -382,10 +382,10 @@ UBigInt &operator>>=(UBigInt &bigint, size_t shift) noexcept {
   UBigInt f = first;
   UBigInt s = second;
   size_t power_of_2 = 0;
-  while (f != 0 && s != 0) [[likely]] {
+  while (f != 0 && s != 0) {
     auto f_mod2 = static_cast<uint32_t>(f) % 2;
     auto s_mod2 = static_cast<uint32_t>(s) % 2;
-    if ((f_mod2 == 0) && (s_mod2 == 0)) [[likely]] {
+    if ((f_mod2 == 0) && (s_mod2 == 0)) {
       power_of_2++;
       f >>= 1;
       s >>= 1;
