@@ -1,17 +1,47 @@
 #include "BigInt.hpp"
 #include <gtest/gtest.h>
 
+#include <cstddef>
 #include <random>
 
-class RandomIntTests : public ::testing::Test {
+static_assert(
+    []() constexpr -> bool {
+      auto a = BigInt::FromString("-1.2e40");
+      auto b = BigInt::FromString("3.4e39");
+      return (a + b) == BigInt::FromString("-8.6e39") && (a + b).ToString() == "-8.6e39";
+    }(),
+    "constexpr string addition test");
+static_assert(
+    []() constexpr -> bool {
+      auto a = BigInt::FromString("-1.2e40");
+      auto b = BigInt::FromString("3.4e39");
+      return (a - b) == BigInt::FromString("-1.54e40") && (a - b).ToString() == "-1.54e40";
+    }(),
+    "constexpr string addition test");
+static_assert(
+    []() constexpr -> bool {
+      auto a = BigInt::FromString("-1.2e40");
+      auto b = BigInt::FromString("3.4e39");
+      return (a * b) == BigInt::FromString("-4.08e79") && (a * b).ToString() == "-4.08e79";
+    }(),
+    "constexpr string multiplication test");
+static_assert(
+    []() constexpr -> bool {
+      auto a = BigInt::FromString("-1.2e40");
+      auto b = BigInt::FromString("3.4e29");
+      return (a / b) == BigInt::FromString("-35294117647") && (a / b).ToString() == "-3.52941e10";
+    }(),
+    "constexpr string multiplication test");
+
+class IRandomIntTests : public ::testing::Test {
  public:
   std::uniform_int_distribution<int64_t> dist;
   std::default_random_engine rng;
 };
 
-class ConstructorTests : public RandomIntTests {};
+class IConstructorTests : public IRandomIntTests {};
 
-TEST_F(ConstructorTests, DefaultConstructorTest) {
+TEST_F(IConstructorTests, DefaultConstructorTest) {
   BigInt bigint;
   ASSERT_EQ(bigint, 0);
   ASSERT_LE(bigint, 0);
@@ -21,7 +51,7 @@ TEST_F(ConstructorTests, DefaultConstructorTest) {
   ASSERT_GT(bigint, -1);
 }
 
-TEST_F(ConstructorTests, NumberConstructorTest) {
+TEST_F(IConstructorTests, NumberConstructorTest) {
   for (size_t i = 0; i < 10000; i++) {
     int64_t number = dist(rng);
     BigInt bigint(number);
@@ -30,7 +60,7 @@ TEST_F(ConstructorTests, NumberConstructorTest) {
   }
 }
 
-TEST_F(ConstructorTests, CopyConstructorTest) {
+TEST_F(IConstructorTests, CopyConstructorTest) {
   for (size_t i = 0; i < 10000; i++) {
     int64_t number = dist(rng);
     const BigInt first(number);
@@ -39,7 +69,7 @@ TEST_F(ConstructorTests, CopyConstructorTest) {
     ASSERT_EQ(first, copy);
   }
 }
-TEST_F(ConstructorTests, MoveConstructorTest) {
+TEST_F(IConstructorTests, MoveConstructorTest) {
   for (size_t i = 0; i < 10000; i++) {
     int64_t number = dist(rng);
     BigInt first(number);
@@ -49,9 +79,9 @@ TEST_F(ConstructorTests, MoveConstructorTest) {
   }
 }
 
-class AssOperatorTests : public RandomIntTests {};
+class IAssOperatorTests : public IRandomIntTests {};
 
-TEST_F(AssOperatorTests, CopyOperatorTest) {
+TEST_F(IAssOperatorTests, CopyOperatorTest) {
   for (size_t i = 0; i < 10000; i++) {
     int64_t number = dist(rng);
     const BigInt first(number);
@@ -61,7 +91,7 @@ TEST_F(AssOperatorTests, CopyOperatorTest) {
     ASSERT_EQ(first, copy);
   }
 }
-TEST_F(AssOperatorTests, MoveOperatorTest) {
+TEST_F(IAssOperatorTests, MoveOperatorTest) {
   for (size_t i = 0; i < 10000; i++) {
     int64_t number = dist(rng);
     BigInt first(number);
@@ -71,7 +101,7 @@ TEST_F(AssOperatorTests, MoveOperatorTest) {
     ASSERT_EQ(number, copy);
   }
 }
-TEST_F(AssOperatorTests, NumberCopyOperatorTest) {
+TEST_F(IAssOperatorTests, NumberCopyOperatorTest) {
   for (size_t i = 0; i < 10000; ++i) {
     const auto number = dist(rng);
     BigInt bigint;
@@ -80,37 +110,37 @@ TEST_F(AssOperatorTests, NumberCopyOperatorTest) {
   }
 }
 
-class StreamConsistencyTests : public ::testing::TestWithParam<std::string> {};
+class IStreamConsistencyTests : public ::testing::TestWithParam<std::string> {};
 
-TEST_P(StreamConsistencyTests, StreamConsistencyTest) {
+TEST_P(IStreamConsistencyTests, StreamConsistencyTest) {
   BigInt number;
   std::istringstream(GetParam()) >> number;
   ASSERT_EQ((std::ostringstream() << number).str(), GetParam());
 }
 
-INSTANTIATE_TEST_SUITE_P(StreamConsistency, StreamConsistencyTests,
+INSTANTIATE_TEST_SUITE_P(StreamConsistency, IStreamConsistencyTests,
                          ::testing::Values("123456", "-1.23456e127", "9.99999e999", "-1e6", "6.66e4321", "-4.3e534",
                                            "6.746e645", "-1.5876e1000", "73645", "-4090", "420", "-69", "3", "0"));
 
-class StreamStandartizationTests : public ::testing::TestWithParam<std::pair<std::string, std::string>> {};
+class IStreamStandartizationTests : public ::testing::TestWithParam<std::pair<std::string, std::string>> {};
 
-TEST_P(StreamStandartizationTests, StreamStandartizationTest) {
+TEST_P(IStreamStandartizationTests, StreamStandartizationTest) {
   BigInt number;
   ASSERT_NO_THROW(std::istringstream(GetParam().first) >> number);
   ASSERT_EQ((std::ostringstream() << number).str(), GetParam().second);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    StreamStandartization, StreamStandartizationTests,
+    StreamStandartization, IStreamStandartizationTests,
     ::testing::Values(std::make_pair("1000000", "1e6"), std::make_pair("1234567890987654321", "1.23457e18"),
                       std::make_pair("-1.234567890e100", "-1.23457e100"), std::make_pair("1.0000e500", "1e500"),
                       std::make_pair("-7.000001e15", "-7e15"), std::make_pair("123.456e56", "1.23456e58"),
                       std::make_pair("1029384756.6574839201e73", "1.02938e82"), std::make_pair("1.234567e3", "1235"),
                       std::make_pair("-9.999999e304", "-1e305"), std::make_pair("-0", "0")));
 
-class Sub64OperatorTests : public RandomIntTests {};
+class ISub64OperatorTests : public IRandomIntTests {};
 
-TEST_F(Sub64OperatorTests, AddTest) {
+TEST_F(ISub64OperatorTests, AddTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng) % std::numeric_limits<int64_t>::max();
     auto second = dist(rng) % (std::numeric_limits<int64_t>::max() - std::abs(first));
@@ -122,13 +152,12 @@ TEST_F(Sub64OperatorTests, AddTest) {
     ASSERT_EQ((number = first) += BigInt(second), first + second);
     ASSERT_EQ((number = first) += UBigInt(std::abs(second)), first + std::abs(second));
     ASSERT_EQ((number = std::min(first, second)) += number, std::min(first, second) * 2);
-    int64_t shift = dist(rng) % 256;
-    ASSERT_EQ((BigInt(first) << std::abs(shift)) + (BigInt(second) << std::abs(shift)), BigInt(first + second)
-                                                                                            << std::abs(shift));
+    auto shift = static_cast<size_t>(std::abs(dist(rng) % 256));
+    ASSERT_EQ((BigInt(first) << shift) + (BigInt(second) << shift), BigInt(first + second) << shift);
   }
 }
 
-TEST_F(Sub64OperatorTests, SubTest) {
+TEST_F(ISub64OperatorTests, SubTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng) % (1l << 62);
     auto second = dist(rng) % (1l << 62);
@@ -140,12 +169,12 @@ TEST_F(Sub64OperatorTests, SubTest) {
     ASSERT_EQ((number = first) -= BigInt(second), first - second);
     ASSERT_EQ((number = first) -= UBigInt(std::abs(second)), first - std::abs(second));
     ASSERT_EQ((number = std::min(first, second)) -= number, 0);
-    int64_t shift = std::abs(dist(rng) % 256);
+    auto shift = static_cast<size_t>(std::abs(dist(rng) % 256));
     ASSERT_EQ((BigInt(first) << shift) - (BigInt(second) << shift), BigInt(first - second) << shift);
   }
 }
 
-TEST_F(Sub64OperatorTests, MulTest) {
+TEST_F(ISub64OperatorTests, MulTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng) % std::numeric_limits<int64_t>::min();
     auto second = dist(rng) % (std::numeric_limits<int64_t>::max() / first);
@@ -157,13 +186,12 @@ TEST_F(Sub64OperatorTests, MulTest) {
     ASSERT_EQ((number = first) *= BigInt(second), first * second);
     ASSERT_EQ((number = first) *= UBigInt(std::abs(second)), first * std::abs(second));
     ASSERT_EQ((number = std::min(first, second)) *= number, std::min(first, second) * std::min(first, second));
-    int64_t shift = dist(rng) % 256;
-    ASSERT_EQ((BigInt(first) << std::abs(shift)) * (BigInt(second) << std::abs(shift)), BigInt(first * second)
-                                                                                            << std::abs(shift * 2));
+    auto shift = static_cast<size_t>(std::abs(dist(rng) % 256));
+    ASSERT_EQ((BigInt(first) << shift) * (BigInt(second) << shift), BigInt(first * second) << (shift * 2));
   }
 }
 
-TEST_F(Sub64OperatorTests, DivTest) {
+TEST_F(ISub64OperatorTests, DivTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng);
     auto second = dist(rng);
@@ -175,12 +203,12 @@ TEST_F(Sub64OperatorTests, DivTest) {
     ASSERT_EQ((number = first) /= BigInt(second), first / second);
     ASSERT_EQ((number = first) /= UBigInt(std::abs(second)), first / std::abs(second));
     ASSERT_EQ((number = std::min(first, second)) /= number, 1);
-    int64_t shift = dist(rng) % 256;
-    ASSERT_EQ((BigInt(first) << std::abs(shift)) / (BigInt(second) << std::abs(shift)), BigInt(first / second));
+    auto shift = static_cast<size_t>(std::abs(dist(rng) % 256));
+    ASSERT_EQ((BigInt(first) << shift) / (BigInt(second) << shift), BigInt(first / second));
   }
 }
 
-TEST_F(Sub64OperatorTests, ModTest) {
+TEST_F(ISub64OperatorTests, ModTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng);
     auto second = dist(rng);
@@ -192,13 +220,12 @@ TEST_F(Sub64OperatorTests, ModTest) {
     ASSERT_EQ((number = first) %= BigInt(second), first % second);
     ASSERT_EQ((number = first) %= UBigInt(std::abs(second)), first % std::abs(second));
     ASSERT_EQ((number = std::min(first, second)) %= number, 0);
-    int64_t shift = dist(rng) % 256;
-    ASSERT_EQ((BigInt(first) << std::abs(shift)) % (BigInt(second) << std::abs(shift)), BigInt(first % second)
-                                                                                            << std::abs(shift));
+    auto shift = static_cast<size_t>(std::abs(dist(rng) % 256));
+    ASSERT_EQ((BigInt(first) << shift) % (BigInt(second) << shift), BigInt(first % second) << shift);
   }
 }
 
-TEST_F(Sub64OperatorTests, LTTest) {
+TEST_F(ISub64OperatorTests, LTTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng) % std::numeric_limits<int64_t>::min();
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
@@ -208,11 +235,11 @@ TEST_F(Sub64OperatorTests, LTTest) {
     ASSERT_EQ(BigInt(first) < second, first < second);
     ASSERT_EQ(UBigInt(std::abs(first)) < BigInt(second), std::abs(first) < second);
     ASSERT_EQ(first < BigInt(second), first < second);
-    auto shift = std::abs(dist(rng) % 256);
+    auto shift = static_cast<size_t>(std::abs(dist(rng) % 256));
     ASSERT_EQ((BigInt(first) << shift) < (BigInt(second) << shift), first < second);
   }
 }
-TEST_F(Sub64OperatorTests, GTTest) {
+TEST_F(ISub64OperatorTests, GTTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng) % std::numeric_limits<int64_t>::min();
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
@@ -222,11 +249,11 @@ TEST_F(Sub64OperatorTests, GTTest) {
     ASSERT_EQ(BigInt(first) > second, first > second);
     ASSERT_EQ(UBigInt(std::abs(first)) > BigInt(second), std::abs(first) > second);
     ASSERT_EQ(first > BigInt(second), first > second);
-    auto shift = std::abs(dist(rng) % 256);
+    auto shift = static_cast<size_t>(std::abs(dist(rng) % 256));
     ASSERT_EQ((BigInt(first) << shift) > (BigInt(second) << shift), first > second);
   }
 }
-TEST_F(Sub64OperatorTests, LETest) {
+TEST_F(ISub64OperatorTests, LETest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng) % std::numeric_limits<int64_t>::min();
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
@@ -236,11 +263,11 @@ TEST_F(Sub64OperatorTests, LETest) {
     ASSERT_EQ(BigInt(first) <= second, first <= second);
     ASSERT_EQ(UBigInt(std::abs(first)) <= BigInt(second), std::abs(first) <= second);
     ASSERT_EQ(first <= BigInt(second), first <= second);
-    auto shift = std::abs(dist(rng) % 256);
+    auto shift = static_cast<size_t>(std::abs(dist(rng) % 256));
     ASSERT_EQ((BigInt(first) << shift) <= (BigInt(second) << shift), first <= second);
   }
 }
-TEST_F(Sub64OperatorTests, GETest) {
+TEST_F(ISub64OperatorTests, GETest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng) % std::numeric_limits<int64_t>::min();
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
@@ -250,11 +277,11 @@ TEST_F(Sub64OperatorTests, GETest) {
     ASSERT_EQ(BigInt(first) >= second, first >= second);
     ASSERT_EQ(UBigInt(std::abs(first)) >= BigInt(second), std::abs(first) >= second);
     ASSERT_EQ(first >= BigInt(second), first >= second);
-    auto shift = std::abs(dist(rng) % 256);
+    auto shift = static_cast<size_t>(std::abs(dist(rng) % 256));
     ASSERT_EQ((BigInt(first) << shift) >= (BigInt(second) << shift), first >= second);
   }
 }
-TEST_F(Sub64OperatorTests, EQTest) {
+TEST_F(ISub64OperatorTests, EQTest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng) % std::numeric_limits<int64_t>::min();
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
@@ -264,11 +291,11 @@ TEST_F(Sub64OperatorTests, EQTest) {
     ASSERT_EQ(BigInt(first) == second, first == second);
     ASSERT_EQ(UBigInt(std::abs(first)) == BigInt(second), std::abs(first) == second);
     ASSERT_EQ(first == BigInt(second), first == second);
-    auto shift = std::abs(dist(rng) % 256);
+    auto shift = static_cast<size_t>(std::abs(dist(rng) % 256));
     ASSERT_EQ((BigInt(first) << shift) == (BigInt(second) << shift), first == second);
   }
 }
-TEST_F(Sub64OperatorTests, NETest) {
+TEST_F(ISub64OperatorTests, NETest) {
   for (size_t i = 0; i < 1000; i++) {
     auto first = dist(rng) % std::numeric_limits<int64_t>::min();
     auto second = dist(rng) % std::numeric_limits<int64_t>::min();
@@ -278,30 +305,30 @@ TEST_F(Sub64OperatorTests, NETest) {
     ASSERT_EQ(BigInt(first) != second, first != second);
     ASSERT_EQ(UBigInt(std::abs(first)) != BigInt(second), std::abs(first) != second);
     ASSERT_EQ(first != BigInt(second), first != second);
-    auto shift = std::abs(dist(rng) % 256);
+    auto shift = static_cast<size_t>(std::abs(dist(rng) % 256));
     ASSERT_EQ((BigInt(first) << shift) != (BigInt(second) << shift), first != second);
   }
 }
 
-TEST_F(Sub64OperatorTests, LeftShiftTest) {
+TEST_F(ISub64OperatorTests, LeftShiftTest) {
   for (size_t i = 0; i < 1000; ++i) {
-    auto first = dist(rng) % (1ull << 48);
-    auto second = dist(rng) % 15;
+    auto first = dist(rng) % (1ll << 48);
+    auto second = static_cast<size_t>(dist(rng) % 15);
     BigInt number;
     ASSERT_EQ(BigInt(first) << 0, first);
     ASSERT_EQ((number = first) <<= 0, first);
     ASSERT_EQ(BigInt(first) << second, first << second);
     ASSERT_EQ((number = first) <<= second, first << second);
     first = dist(rng);
-    second = dist(rng) % 1024;
+    second = static_cast<size_t>(dist(rng) % 1024);
     ASSERT_EQ(BigInt(first) << second, BigInt(first) * Power(UBigInt(2), second));
   }
 }
 
-TEST_F(Sub64OperatorTests, RightShiftTest) {
+TEST_F(ISub64OperatorTests, RightShiftTest) {
   for (size_t i = 0; i < 1000; ++i) {
     auto first = dist(rng);
-    auto second = dist(rng) % 63;
+    auto second = static_cast<size_t>(std::abs(dist(rng)) % 63);
     BigInt number;
     ASSERT_EQ(BigInt(first) >> 0, first);
     ASSERT_EQ((number = first) >>= 0, first);

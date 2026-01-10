@@ -1,5 +1,4 @@
-module;
-
+#pragma once
 #include <stdexcept>
 #include <utility>
 #include <concepts>
@@ -10,9 +9,7 @@ module;
 #include <iterator>
 #include <compare>
 
-export module CircleArr;
-
-export template <class Stored>
+template <class Stored>
   requires std::same_as<Stored, std::decay_t<Stored>>
 class CircleArr {
  public:
@@ -42,7 +39,8 @@ class CircleArr {
   }
 
   template <std::forward_iterator Iter>
-  constexpr CircleArr(Iter begin, const Iter &end) : CircleArr() {
+  constexpr CircleArr(Iter begin, const Iter end) : CircleArr() {
+    Reserve(static_cast<size_t>(std::distance(begin, end)));
     while (begin != end) {
       PushBack(*begin);
       begin++;
