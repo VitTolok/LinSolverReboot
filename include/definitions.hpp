@@ -1,10 +1,14 @@
 #pragma once
-#include <stdexcept>
+#include <charconv>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <exception>
 #include <memory>
 
 class MachineError : public std::exception {
  public:
-  MachineError() : message_ptr(message_) {
+  MachineError() : message_ptr(kMessage) {
   }
 
   [[nodiscard]] const char *what() const noexcept final {
@@ -15,14 +19,105 @@ class MachineError : public std::exception {
     return std::make_unique<MachineError>(std::move<MachineError &>(*this));
   }
 
-  virtual ~MachineError() = default;
+  ~MachineError() override = default;
 
  protected:
   const char *message_ptr;
 
  private:
-  inline static constexpr const char message_[] = "Unknown Machine Error";
+  inline static constexpr char kMessage[] = "Unknown Machine Error";
 };
+
+template <typename T>
+  requires requires(const T &v) {
+    v < 0;
+    -v;
+  }
+constexpr T Abs(const T &value) {
+  if (value < 0) {
+    return -value;
+  }
+  return value;
+}
+
+consteval auto PowersOf10() noexcept {
+  std::array<uint64_t, 20> powers;
+  powers[0] = 1;
+  for (size_t i = 1; i < 20; i++) {
+    powers[i] = powers[i - 1] * 10;
+  }
+  return powers;
+}
+
+constexpr inline uint64_t TenToIntPower(uint64_t power) noexcept {
+  constexpr static auto kPowers = PowersOf10();
+  return kPowers[power];
+}
+
+constexpr char *DoublePrinter(char *const start, const size_t length, const long double number) noexcept {
+  char *const end = start + length;
+  auto whole = Abs(static_cast<int64_t>(number));
+  if (length == 0) {
+    return nullptr;
+  }
+  char *const whole_begin = start + (number < 0 ? 1 : 0);
+  if (number < 0) {
+    *start = '-';
+  }
+  char *whole_end = nullptr;
+  int64_t decimal_length = 0;
+  {
+    auto [whole_end_ptr, errc] = std::to_chars(whole_begin, end, whole);
+    if (errc != std::errc{}) {
+      return nullptr;
+    }
+    whole_end = whole_end_ptr;
+    decimal_length = end - whole_end_ptr - 1;
+  }
+  auto decimal = Abs(number - whole);
+  {
+    long double margin = 0.5L;
+    for (int64_t i = 0; i < decimal_length; i++) {
+      margin /= 10;
+    }
+    if (decimal + margin >= 1) {
+      whole++;
+      decimal -= 1;
+    }
+    auto [whole_end_ptr, errc] = std::to_chars(whole_begin, end, whole);
+    if (errc != std::errc{}) {
+      return nullptr;
+    }
+    if (whole_end_ptr != whole_end) {
+      decimal = decimal + margin * 10;
+    } else {
+      decimal += margin;
+    }
+    whole_end = whole_end_ptr;
+    decimal_length = end - whole_end_ptr - 1;
+  }
+  if (decimal_length <= 0) {
+    return whole_end;
+  }
+  *whole_end = '.';
+  char *ptr = whole_end + 1;
+  while (ptr < end) {
+    decimal *= 10;
+    *ptr = static_cast<char>('0' + static_cast<char>(decimal));
+    decimal -= static_cast<char>(decimal);
+    ptr++;
+  }
+  ptr--;
+  while (*ptr == '0') {
+    *ptr = '\0';
+    ptr--;
+  }
+  if (*ptr == '.') {
+    *ptr = '\0';
+    ptr--;
+  }
+  return ptr + 1;
+}
 
 template <class A, class B = A>
 concept Addable = requires(std::decay_t<A> a, std::decay_t<B> b) { a + b; };
