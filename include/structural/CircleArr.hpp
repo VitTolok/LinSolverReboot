@@ -9,6 +9,8 @@
 #include <type_traits>
 #include <utility>
 
+// Tests show this "optimization" is not worth it.
+
 template <typename Stored>
 class CircleArr {
  public:
