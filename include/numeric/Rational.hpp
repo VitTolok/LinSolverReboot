@@ -10,7 +10,7 @@
 
 class InvalidRational : public MachineError {
  public:
-  constexpr InvalidRational() {
+  InvalidRational() {
     message_ptr = kMessage;
   }
 
@@ -20,7 +20,7 @@ class InvalidRational : public MachineError {
 
 class InvalidRationalString : public MachineError {
  public:
-  constexpr InvalidRationalString() {
+  InvalidRationalString() {
     message_ptr = kMessage;
   }
 
@@ -271,6 +271,9 @@ template <OnlyRational ORationalA, OnlyRational ORationalB>
   if constexpr (std::is_rvalue_reference_v<decltype(first)>) {
     return std::move(first /= second);
   } else if constexpr (std::is_rvalue_reference_v<decltype(second)>) {
+    if (first == 0) {
+      return std::forward<ORationalA>(first);
+    }
     return 1 / std::move(second /= first);
   } else {
     Rational copy(first);
@@ -293,7 +296,7 @@ template <OnlyRational ORational, SomeInt Integer>
 [[nodiscard]] constexpr inline Rational operator+(ORational &&rational, Integer &&integer) {
   if constexpr (std::is_rvalue_reference_v<decltype(rational)>) {
     return std::move(rational += integer);
-  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)>) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)> && SomeBigInt<Integer>) {
     return rational + Rational(std::move(integer));
   } else {
     Rational copy(rational);
@@ -305,7 +308,7 @@ template <OnlyRational ORational, SomeInt Integer>
 [[nodiscard]] constexpr inline Rational operator-(ORational &&rational, Integer &&integer) {
   if constexpr (std::is_rvalue_reference_v<decltype(rational)>) {
     return std::move(rational -= integer);
-  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)>) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)> && SomeBigInt<Integer>) {
     return rational - Rational(std::move(integer));
   } else {
     Rational copy(rational);
@@ -317,7 +320,7 @@ template <OnlyRational ORational, SomeInt Integer>
 [[nodiscard]] constexpr inline Rational operator*(ORational &&rational, Integer &&integer) {
   if constexpr (std::is_rvalue_reference_v<decltype(rational)>) {
     return std::move(rational *= integer);
-  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)>) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)> && SomeBigInt<Integer>) {
     return rational * Rational(std::move(integer));
   } else {
     Rational copy(rational);
@@ -329,7 +332,7 @@ template <OnlyRational ORational, SomeInt Integer>
 [[nodiscard]] constexpr inline Rational operator/(ORational &&rational, Integer &&integer) {
   if constexpr (std::is_rvalue_reference_v<decltype(rational)>) {
     return std::move(rational /= integer);
-  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)>) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)> && SomeBigInt<Integer>) {
     return rational / Rational(std::move(integer));
   } else {
     Rational copy(rational);
@@ -341,7 +344,7 @@ template <OnlyRational ORational, SomeInt Integer>
 [[nodiscard]] constexpr inline Rational operator%(ORational &&rational, Integer &&integer) {
   if constexpr (std::is_rvalue_reference_v<decltype(rational)>) {
     return std::move(rational %= integer);
-  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)>) {
+  } else if constexpr (std::is_rvalue_reference_v<decltype(integer)> && SomeBigInt<Integer>) {
     return rational % Rational(std::move(integer));
   } else {
     Rational copy(rational);
@@ -417,6 +420,9 @@ template <OnlyRational ORational, SomeInt Integer>
   return std::forward<ORational>(rational) == std::forward<Integer>(integer);
 }
 constexpr inline char *Rational::ToString(char *const start, const size_t size) const {
+  if (den_ == 1) {
+    return num_.ToString(start, size);
+  }
   if (num_.Abs() < 1'000'000 && den_ < 1'000'000) {
     {
       char result[10]{};
@@ -425,7 +431,7 @@ constexpr inline char *Rational::ToString(char *const start, const size_t size) 
       num_ptr++;
       auto den_ptr = den_.ToString(num_ptr, static_cast<size_t>((result + 10) - num_ptr));
       if (den_ptr != nullptr) {
-        if (size >= static_cast<size_t>(den_ptr - start)) {
+        if (size >= static_cast<size_t>(den_ptr - result)) {
           for (size_t i = 0; result + i < den_ptr; i++) {
             start[i] = result[i];
           }
@@ -435,19 +441,34 @@ constexpr inline char *Rational::ToString(char *const start, const size_t size) 
     }
   }
   auto approx = GetApproximation();
+  if (Abs(approx.power) < 3) {
+    approx.multiplier *= TenToIntPower(static_cast<uint64_t>(Abs(approx.power)));
+    approx.power = 0;
+  }
   char *ptr = nullptr;
   if (num_ < 0) {
-    if (size < 1) {
+    if (size < 8) {
       return nullptr;
     }
     start[0] = '-';
-    ptr = DoublePrinter(start + 1, size - 1, Abs(approx.multiplier));
+    ptr = DoublePrinter(start + 1, 7, Abs(approx.multiplier));
   } else {
-    ptr = DoublePrinter(start, size, Abs(approx.multiplier));
+    if (size < 7) {
+      return nullptr;
+    }
+    ptr = DoublePrinter(start, 7, Abs(approx.multiplier));
   }
   if (ptr == nullptr) {
     return nullptr;
   }
+  if (approx.power == 0) {
+    return ptr;
+  }
+  if (start + size <= ptr) {
+    return nullptr;
+  }
+  *ptr = 'e';
+  ptr++;
   auto [eptr, errc] = std::to_chars(ptr, start + size, approx.power);
   if (errc != std::errc{}) {
     return nullptr;
@@ -498,7 +519,7 @@ constexpr inline Rational &Rational::FromString(std::string_view str, Rational &
   {
     const auto dot_pos = str.find('.');
     if (dot_pos != std::string_view::npos) {
-      frac_size = str.size() + 1 - dot_pos;
+      frac_size = str.size() - 1 - dot_pos;
       try {
         UBigInt::FromString(str.substr(dot_pos + 1), frac);
       } catch (BigIntInvalidString e) {
@@ -569,13 +590,13 @@ constexpr inline Rational &operator%=(Rational &base, const Rational &mod) {
 
 constexpr inline Rational &operator+=(Rational &first, Rational &&second) {
   first.num_ = (std::move(first.num_) * second.den_) + (first.den_ * std::move(second.num_));
-  first.den_ *= second.den_;
+  first.den_ *= std::move(second.den_);
   first.Normalize();
   return first;
 }
 constexpr inline Rational &operator-=(Rational &first, Rational &&second) {
   first.num_ = (std::move(first.num_) * second.den_) - (first.den_ * std::move(second.num_));
-  first.den_ *= second.den_;
+  first.den_ *= std::move(second.den_);
   first.Normalize();
   return first;
 }
@@ -610,6 +631,11 @@ constexpr inline Rational &Rational::Floor() {
   auto den_approx = den_.GetApproximation();
   Approximation approx{num_approx.multiplier / den_approx.multiplier,
                        static_cast<int64_t>(num_approx.power) - static_cast<int64_t>(den_approx.power)};
+  // if num_approx.multiplier < den_approx.multiplier
+  if (approx.multiplier <= 1.L - 5e-12) {
+    approx.multiplier *= 10;
+    approx.power--;
+  }
   return approx;
 }
 
@@ -626,7 +652,9 @@ constexpr inline void Rational::Normalize() {
 }
 
 constexpr inline std::ostream &operator<<(std::ostream &out, const Rational &rational) {
-  return out << rational.ToString();
+  char output[32]{};
+  rational.ToString(output, 31);
+  return out << output;
 }
 constexpr inline std::istream &operator>>(std::istream &in, Rational &rational) {
   std::string input;

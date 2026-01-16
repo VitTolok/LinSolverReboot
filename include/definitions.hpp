@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <exception>
 #include <memory>
+#include <utility>
 
 class MachineError : public std::exception {
  public:
@@ -117,6 +118,18 @@ constexpr char *DoublePrinter(char *const start, const size_t length, const long
     ptr--;
   }
   return ptr + 1;
+}
+
+consteval void ConstAssert(bool expr) {
+  if (!expr) {
+    std::unreachable();
+  }
+}
+consteval void ConstAssertEQ(const auto &first, const auto &second) {
+  ConstAssert(first == second);
+}
+consteval void ConstAssertLT(const auto &first, const auto &second) {
+  ConstAssert(first < second);
 }
 
 template <class A, class B = A>

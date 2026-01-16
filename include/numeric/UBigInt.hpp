@@ -60,7 +60,7 @@ class UBigInt {
  public:
   using UInt64 = std::uint64_t;
   using UInt32 = std::uint32_t;
-  using SizeT = CircleArr<UInt32>::SizeT;
+  using SizeT = std::size_t;
   constexpr UBigInt() : storage_() {
   }
   constexpr explicit UBigInt(UInt64 number) : storage_() {
@@ -163,8 +163,8 @@ class UBigInt {
     while (!storage_.Empty() && storage_.Back() == 0u) {
       storage_.PopBack();
     }
-    if (storage_.Size() == 0 && storage_.Capacity() >= 8) {
-      storage_.Deallocate();
+    if (storage_.Size() == 0 && storage_.Capacity() > 16) {
+      storage_ = CircleArr<uint32_t>{};
     }
   }
 
@@ -184,8 +184,8 @@ class UBigInt {
 
   static constexpr inline void ParseInteger(UBigInt &, std::string_view str);
   static constexpr inline long double TenToDoublePower(long double power);
-  friend class Rational;
   static constexpr inline uint32_t InPlaceBigDiv(UBigInt &remainder, const UBigInt &div);
+  static constexpr inline uint32_t InPlaceBigDiv(UBigInt &remainder, uint64_t div);
 };
 
 [[nodiscard]] constexpr inline std::strong_ordering operator<=>(const UBigInt &, const UBigInt &) noexcept;
@@ -584,9 +584,20 @@ constexpr inline uint32_t UBigInt::InPlaceBigDiv(UBigInt &remainder, const UBigI
   }
   auto rem_approx = remainder.GetApproximation();
   auto div_approx = div.GetApproximation();
-  auto result = static_cast<uint32_t>(rem_approx.multiplier / div_approx.multiplier *
-                                      TenToIntPower(rem_approx.power - div_approx.power));
-  remainder -= (div * result);
+  long double double_res =
+      rem_approx.multiplier / div_approx.multiplier * TenToIntPower(rem_approx.power - div_approx.power);
+  uint32_t result = 0;
+  if (double_res > std::numeric_limits<uint32_t>::max()) [[unlikely]] {
+    result = std::numeric_limits<uint32_t>::max();
+  } else {
+    result = static_cast<uint32_t>(double_res);
+  }
+  auto whole = div * result;
+  if (remainder <= whole) [[unlikely]] {
+    result--;
+    whole -= div;
+  }
+  remainder -= whole;
   if (remainder >= div) [[unlikely]] {
     ++result;
     remainder -= div;
@@ -837,7 +848,7 @@ constexpr inline UBigInt &operator%=(UBigInt &bigint, uint64_t div) {
 }
 
 constexpr inline UBigInt &operator<<=(UBigInt &bigint, size_t shift) {
-  if (bigint == 0) [[unlikely]] {
+  if (bigint == 0) {
     return bigint;
   }
   for (size_t i = 0; i < shift / 32; i++) {
@@ -852,7 +863,7 @@ constexpr inline UBigInt &operator<<=(UBigInt &bigint, size_t shift) {
       bigint.storage_[i] = static_cast<uint32_t>(shift_64bit) | carryover;
       carryover = static_cast<uint32_t>(shift_64bit >> 32);
     }
-    if (carryover > 0) [[unlikely]] {
+    if (carryover > 0) {
       bigint.storage_.PushBack(carryover);
     }
   }
@@ -965,28 +976,35 @@ constexpr inline UBigInt &operator>>=(UBigInt &bigint, size_t shift) noexcept {
   if (second == 0) {
     return first;
   }
-  if (first <= std::numeric_limits<uint64_t>::max() && second <= std::numeric_limits<uint64_t>::max()) [[likely]] {
+  if (first <= std::numeric_limits<uint64_t>::max() && second <= std::numeric_limits<uint64_t>::max()) {
     return UBigInt(std::gcd(static_cast<uint64_t>(first), static_cast<uint64_t>(second)));
   }
   UBigInt f = first;
   UBigInt s = second;
   size_t power_of_2 = 0;
   while (f != 0 && s != 0) {
-    auto f_mod2 = static_cast<uint32_t>(f) % 2;
-    auto s_mod2 = static_cast<uint32_t>(s) % 2;
+    auto f_mod2 = static_cast<uint32_t>(f) & 1;
+    auto s_mod2 = static_cast<uint32_t>(s) & 1;
     if ((f_mod2 == 0) && (s_mod2 == 0)) {
       power_of_2++;
       f >>= 1;
       s >>= 1;
-    } else if (f_mod2 == 0) [[likely]] {
+    } else if (f_mod2 == 0) {
       f >>= 1;
-    } else if (s_mod2 == 0) [[likely]] {
+    } else if (s_mod2 == 0) {
       s >>= 1;
     } else {
-      const_cast<UBigInt &>(std::max(f, s)) -= std::min(f, s);
+      if (f < s) {
+        s -= f;
+      } else {
+        f -= s;
+      }
     }
   }
-  return std::max(f, s) * Power(UBigInt(2), power_of_2);
+  if (f < s) {
+    return s <<= power_of_2;
+  }
+  return f <<= power_of_2;
 }
 
 constexpr inline char *UBigInt::ToString(char *const start, size_t const size) const noexcept {
