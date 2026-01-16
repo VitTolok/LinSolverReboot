@@ -8,15 +8,29 @@
 #include <deque>
 #include <stdexcept>
 #include <utility>
+#include "definitions.hpp"
 
 // constexpr tests
 
 static_assert(
     []() constexpr -> bool {
-      CircleArr<int> car;
-      return car.Empty() && car.Size() == 0 && car.Capacity() == 0;
+      CircleArr<int32_t> car;
+      return car.Empty() && car.Size() == 0 && car.Capacity() == 6;
     }(),
     "default constructor test");
+static_assert(
+    []() constexpr -> bool {
+      CircleArr<int32_t> rac{1, 2, 3};
+      CircleArr<int32_t> racc(rac);
+      CircleArr<int32_t> car(std::move(rac));
+      ConstAssert(rac.Empty() && rac.Size() == 0 && rac.Capacity() == 6);
+      ConstAssert(!car.Empty() && car.Size() == 3 && car.Capacity() == 6);
+      ConstAssert(!racc.Empty() && racc.Size() == 3 && racc.Capacity() == 6);
+      CircleArr<std::string> strarr{"ok", "hello"};
+      ConstAssert(strarr.Size() == 2 && strarr.Capacity() == 2);
+      return true;
+    }(),
+    "complex constructor test");
 
 static_assert(
     []() constexpr -> bool {
@@ -72,7 +86,8 @@ TEST_F(IDequeComparisonTests, DequeComparisonTest) {
     uint8_t dvalue = 0;
     uint8_t cvalue = 0;
     uint8_t index = 0;
-    switch (GetOperation()) {
+    auto oper = GetOperation();
+    switch (oper) {
       case Operation::kPushBack:
         dvalue = dist(rng);
         deq.push_back(dvalue);
