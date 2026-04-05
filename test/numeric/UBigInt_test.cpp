@@ -34,7 +34,7 @@ static_assert(
 class IRandomIntTests : public ::testing::Test {
  public:
   std::uniform_int_distribution<uint64_t> dist;
-  std::default_random_engine rng;
+  std::default_random_engine rng{765756};
 };
 
 class IConstructorTests : public IRandomIntTests {};

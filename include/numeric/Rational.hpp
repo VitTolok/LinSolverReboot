@@ -10,7 +10,7 @@
 
 class InvalidRational : public MachineError {
  public:
-  constexpr InvalidRational() {
+  InvalidRational() {
     message_ptr = kMessage;
   }
 
@@ -20,7 +20,7 @@ class InvalidRational : public MachineError {
 
 class InvalidRationalString : public MachineError {
  public:
-  constexpr InvalidRationalString() {
+  InvalidRationalString() {
     message_ptr = kMessage;
   }
 
@@ -164,7 +164,7 @@ constexpr inline Rational::Rational(Numerator &&num, Denominator &&den) : num_()
   if constexpr (std::is_signed_v<Denominator> || std::is_same_v<std::decay_t<Denominator>, BigInt>) {
     if (den < 0) {
       (num_ = std::forward<Numerator>(num)) *= -1;
-      den_ = (std::forward<Denominator>(den) * -1);
+      den_ = (std::forward<Denominator>(den) * -1).Abs();
     }
   }
   num_ = std::forward<Numerator>(num);
@@ -425,7 +425,7 @@ constexpr inline char *Rational::ToString(char *const start, const size_t size) 
       num_ptr++;
       auto den_ptr = den_.ToString(num_ptr, static_cast<size_t>((result + 10) - num_ptr));
       if (den_ptr != nullptr) {
-        if (size >= static_cast<size_t>(den_ptr - start)) {
+        if (size >= static_cast<size_t>(den_ptr - result)) {
           for (size_t i = 0; result + i < den_ptr; i++) {
             start[i] = result[i];
           }
@@ -501,7 +501,7 @@ constexpr inline Rational &Rational::FromString(std::string_view str, Rational &
       frac_size = str.size() + 1 - dot_pos;
       try {
         UBigInt::FromString(str.substr(dot_pos + 1), frac);
-      } catch (BigIntInvalidString e) {
+      } catch (const BigIntInvalidString &e) {
         throw InvalidRationalString{};
       }
       str = str.substr(0, dot_pos);
