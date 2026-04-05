@@ -78,7 +78,7 @@ class UBigInt {
   template <std::integral Sub64Int>
   constexpr explicit UBigInt(Sub64Int integer) : UBigInt() {
     if constexpr (std::is_signed_v<Sub64Int>) {
-      if (integer < 0) {
+      if (integer < 0) [[unlikely]] {
         throw UBigIntUnderflow{};
       }
     }
@@ -115,6 +115,7 @@ class UBigInt {
   constexpr inline friend UBigInt &operator*=(UBigInt &, const UBigInt &);
   constexpr inline friend UBigInt &operator/=(UBigInt &, const UBigInt &);
   constexpr inline friend UBigInt &operator%=(UBigInt &, const UBigInt &);
+  constexpr inline friend UBigInt &operator+=(UBigInt &, UBigInt &&);
   constexpr inline friend UBigInt &operator*=(UBigInt &, UBigInt &&);
   constexpr inline friend UBigInt &operator/=(UBigInt &, UBigInt &&);
   constexpr inline friend UBigInt &operator+=(UBigInt &, UInt64);
@@ -224,18 +225,12 @@ class UBigInt {
 }
 // operator overloads
 
-[[nodiscard]] constexpr inline UBigInt operator+(const UBigInt &first, const UBigInt &second) {
-  UBigInt copy(first);
-  return std::move(copy += second);
-}
-[[nodiscard]] constexpr inline UBigInt operator+(UBigInt &&first, const UBigInt &second) {
-  return std::move(first += second);
+[[nodiscard]] constexpr inline UBigInt operator+(UBigInt first, const UBigInt &second) {
+  first += second;
+  return first;
 }
 [[nodiscard]] constexpr inline UBigInt operator+(const UBigInt &first, UBigInt &&second) {
   return std::move(second += first);
-}
-[[nodiscard]] constexpr inline UBigInt operator+(UBigInt &&first, UBigInt &&second) {
-  return std::move(first += second);
 }
 [[nodiscard]] constexpr inline UBigInt operator-(const UBigInt &first, const UBigInt &second) {
   if (first == second) {
@@ -250,15 +245,9 @@ class UBigInt {
 [[nodiscard]] constexpr inline UBigInt operator-(UBigInt &&first, UBigInt &&second) {
   return std::move(first -= second);
 }
-[[nodiscard]] constexpr inline UBigInt operator*(const UBigInt &first, const UBigInt &second) {
-  UBigInt copy(first);
-  return std::move(copy *= second);
-}
-[[nodiscard]] constexpr inline UBigInt operator*(UBigInt &&first, const UBigInt &second) {
-  return std::move(first *= second);
-}
-[[nodiscard]] constexpr inline UBigInt operator*(UBigInt &&first, UBigInt &&second) {
-  return std::move(first *= second);
+[[nodiscard]] constexpr inline UBigInt operator*(UBigInt first, const UBigInt &second) {
+  first *= second;
+  return first;
 }
 [[nodiscard]] constexpr inline UBigInt operator*(const UBigInt &first, UBigInt &&second) {
   return std::move(second *= first);
@@ -279,41 +268,28 @@ class UBigInt {
 [[nodiscard]] constexpr inline UBigInt operator/(UBigInt &&first, UBigInt &&second) {
   return std::move(first /= second);
 }
-[[nodiscard]] constexpr inline UBigInt operator/(const UBigInt &first, UBigInt &&second) {
-  return first / second;
-}
-[[nodiscard]] constexpr inline UBigInt operator%(const UBigInt &first, const UBigInt &second) {
-  UBigInt copy(first);
-  return std::move(copy %= second);
-}
-[[nodiscard]] constexpr inline UBigInt operator%(UBigInt &&first, const UBigInt &second) {
-  return std::move(first %= second);
-}
-[[nodiscard]] constexpr inline UBigInt operator%(UBigInt &&first, UBigInt &&second) {
-  return std::move(first %= second);
+[[nodiscard]] constexpr inline UBigInt operator%(UBigInt first, const UBigInt &second) {
+  first %= second;
+  return first;
 }
 
-[[nodiscard]] constexpr inline UBigInt operator<<(const UBigInt &bigint, std::size_t shift) {
-  UBigInt copy(bigint);
-  return std::move(copy <<= shift);
+[[nodiscard]] constexpr inline UBigInt operator<<(UBigInt bigint, std::size_t shift) {
+  bigint <<= shift;
+  return bigint;
 }
-[[nodiscard]] constexpr inline UBigInt operator<<(UBigInt &&bigint, std::size_t shift) {
-  return std::move(bigint <<= shift);
-}
-[[nodiscard]] constexpr inline UBigInt operator>>(const UBigInt &bigint, std::size_t shift) {
-  UBigInt copy(bigint);
-  return std::move(copy >>= shift);
-}
-[[nodiscard]] constexpr inline UBigInt operator>>(UBigInt &&bigint, std::size_t shift) {
-  return std::move(bigint >>= shift);
+[[nodiscard]] constexpr inline UBigInt operator>>(UBigInt bigint, std::size_t shift) {
+  bigint >>= shift;
+  return bigint;
 }
 
 // Loads of convenience operator templates
 
 template <std::integral Sub64Int>
 [[nodiscard]] constexpr inline std::strong_ordering operator<=>(const UBigInt &bigint, Sub64Int integer) noexcept {
-  if (integer < 0) {
-    return std::strong_ordering::greater;
+  if constexpr (std::is_signed_v<Sub64Int>) {
+    if (integer < 0) {
+      return std::strong_ordering::greater;
+    }
   }
   return bigint <=> static_cast<std::uint64_t>(integer);
 }
@@ -584,9 +560,20 @@ constexpr inline uint32_t UBigInt::InPlaceBigDiv(UBigInt &remainder, const UBigI
   }
   auto rem_approx = remainder.GetApproximation();
   auto div_approx = div.GetApproximation();
-  auto result = static_cast<uint32_t>(rem_approx.multiplier / div_approx.multiplier *
-                                      TenToIntPower(rem_approx.power - div_approx.power));
-  remainder -= (div * result);
+  auto result_approx =
+      (rem_approx.multiplier / div_approx.multiplier) * TenToIntPower(rem_approx.power - div_approx.power);
+  uint32_t result = 0;
+  if (result_approx > std::numeric_limits<uint32_t>::max()) [[unlikely]] {
+    result = std::numeric_limits<uint32_t>::max();
+  } else {
+    result = static_cast<uint32_t>(result_approx);
+  }
+  auto whole = div * result;
+  if (remainder < whole) [[unlikely]] {
+    whole -= div;
+    result--;
+  }
+  remainder -= whole;
   if (remainder >= div) [[unlikely]] {
     ++result;
     remainder -= div;
@@ -635,6 +622,14 @@ constexpr inline UBigInt &operator%=(UBigInt &first, const UBigInt &second) {
     }
     return first = remainder;
   }
+}
+
+constexpr inline UBigInt &operator+=(UBigInt &first, UBigInt &&second) {
+  if (first.storage_.Capacity() < second.storage_.Capacity()) {
+    std::swap(first, second);
+  }
+  first += second;
+  return first;
 }
 
 constexpr inline UBigInt &operator*=(UBigInt &first, UBigInt &&second) {
@@ -828,7 +823,7 @@ constexpr inline UBigInt &operator%=(UBigInt &bigint, uint64_t div) {
     return first.storage_.Size() <=> second.storage_.Size();
   }
   size_t size = first.storage_.Size();
-  for (size_t i = 0; i < first.storage_.Size(); ++i) {
+  for (size_t i = 0; i < size; ++i) {
     if (first.storage_[size - i - 1] != second.storage_[size - i - 1]) {
       return first.storage_[size - i - 1] <=> second.storage_[size - i - 1];
     }
@@ -852,18 +847,18 @@ constexpr inline UBigInt &operator<<=(UBigInt &bigint, size_t shift) {
       bigint.storage_[i] = static_cast<uint32_t>(shift_64bit) | carryover;
       carryover = static_cast<uint32_t>(shift_64bit >> 32);
     }
-    if (carryover > 0) [[unlikely]] {
+    if (carryover > 0) {
       bigint.storage_.PushBack(carryover);
     }
   }
   return bigint;
 }
 constexpr inline UBigInt &operator>>=(UBigInt &bigint, size_t shift) noexcept {
-  if (bigint == 0) [[unlikely]] {
-    return bigint;
-  }
-  for (size_t i = 0; i < shift / 32; i++) {
+  for (size_t i = 0; i < shift / 32 && !bigint.storage_.Empty(); i++) {
     bigint.storage_.PopFront();
+  }
+  if (bigint == 0) {
+    return bigint;
   }
   shift %= 32;
   if (shift > 0 && !bigint.storage_.Empty()) {
@@ -935,7 +930,8 @@ constexpr inline UBigInt &operator>>=(UBigInt &bigint, size_t shift) noexcept {
       }
     }
     return result;
-  } else {
+  }
+  if !consteval {
     static std::map<UBigInt, std::vector<UBigInt>> powers;
     auto location = powers.emplace(base, std::vector<UBigInt>(1, base)).first;
     while ((1_uint64 << location->second.size()) <= power) {
@@ -986,7 +982,7 @@ constexpr inline UBigInt &operator>>=(UBigInt &bigint, size_t shift) noexcept {
       const_cast<UBigInt &>(std::max(f, s)) -= std::min(f, s);
     }
   }
-  return std::max(f, s) * Power(UBigInt(2), power_of_2);
+  return std::max(f, s) * (UBigInt(1) << power_of_2);
 }
 
 constexpr inline char *UBigInt::ToString(char *const start, size_t const size) const noexcept {
