@@ -1,7 +1,7 @@
 #pragma once
 #include "Solver.hpp"
 #include "decomp.hpp"
-#include "rational.hpp"
+#include "Rational.hpp"
 #include <sstream>
 
 struct DecompSolvable : public Solvable {
@@ -11,16 +11,16 @@ struct DecompSolvable : public Solvable {
     input = std::move(string);
     numeric_type = type;
   }
-  virtual ~DecompSolvable() override = default;
+  ~DecompSolvable() override = default;
 };
 
 template <class Numeric>
-struct DecompSolution : public Solution {
+struct DecompSolution : public ISolution {
   std::string det;
   std::string solved;
   std::string lower;
   std::string upper;
-  DecompSolution(const std::string &input, Progress *progress) {
+  DecompSolution(const std::string &input, IProgress *progress) {
     Matrix<Numeric> matrix;
     std::istringstream(input) >> matrix;
     auto decomp = Decompose(matrix, progress);
@@ -29,21 +29,21 @@ struct DecompSolution : public Solution {
     lower = decomp.lower.has_value() ? (std::ostringstream() << *decomp.lower).str() : "DNE";
     upper = decomp.upper.has_value() ? (std::ostringstream() << *decomp.upper).str() : "DNE";
   }
-  virtual std::unique_ptr<Solution> Detach() override {
+  std::unique_ptr<ISolution> Detach() override {
     return std::make_unique<DecompSolution>(std::move(*this));
   }
-  virtual ~DecompSolution() override = default;
+  ~DecompSolution() override = default;
 };
 
 template <class Numeric>
-struct DecompSolver : public Solver {
+struct DecompSolver : public ISolver {
  public:
-  DecompSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
-               const std::function<void(MachineError &&)> &terminator)
-      : Solver(progress, finisher, terminator) {
+  DecompSolver(IProgress &progress, const std::function<void(ISolution &&)> &finisher,
+               const std::function<void(IMachineError &&)> &terminator)
+      : ISolver(progress, finisher, terminator) {
   }
 
-  virtual void operator()(const Solvable &solvable) const override {
+  void operator()(const Solvable &solvable) const override {
     auto decomp_solvable = dynamic_cast<const DecompSolvable *>(&solvable);
     if (decomp_solvable == nullptr) {
       throw InvalidSolutionType{};
@@ -51,15 +51,15 @@ struct DecompSolver : public Solver {
     Finish(DecompSolution<Numeric>(decomp_solvable->input, &progress_));
   }
 
-  virtual ~DecompSolver() override = default;
+  ~DecompSolver() override = default;
 
  private:
   std::unique_ptr<DecompSolution<Numeric>> solution_;
 };
 
-inline std::unique_ptr<Solver> MakeDecompSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
-                                                const std::function<void(MachineError &&)> &terminator,
-                                                const Solvable &solvable) {
+inline std::unique_ptr<ISolver> MakeDecompSolver(IProgress &progress, const std::function<void(ISolution &&)> &finisher,
+                                                 const std::function<void(IMachineError &&)> &terminator,
+                                                 const Solvable &solvable) {
   auto ptr = dynamic_cast<const DecompSolvable *>(&solvable);
   if (ptr == nullptr) {
     throw InvalidSolutionType{};

@@ -5,56 +5,36 @@
 
 #include "definitions.hpp"
 
-class MatrixOutOfRange final : public MachineError {
+class MatrixOutOfRange final : public MachineError<MatrixOutOfRange> {
  public:
-  MatrixOutOfRange(size_t range, const std::string &parameter, size_t reference) {
+  MatrixOutOfRange(size_t range, const std::string &parameter, size_t reference) : MachineError() {
     message_ = (std::ostringstream() << "Matrix has " << range << ' ' << parameter << ", but element " << reference
                                      << " was referenced")
                    .str();
     message_ptr = message_.c_str();
   }
-
-  std::unique_ptr<MachineError> Detach() final {
-    return std::make_unique<MatrixOutOfRange>(std::move(*this));
-  }
-
   ~MatrixOutOfRange() final = default;
 
  private:
   std::string message_;
 };
 
-class InvalidMatrixBase final : public MachineError {
+class InvalidMatrixBase final : public MachineError<InvalidMatrixBase> {
  public:
-  InvalidMatrixBase() {
-    message_ptr = message_;
+  InvalidMatrixBase() : MachineError("std::vector used for Matrix construction is invalid") {
   }
-  ~InvalidMatrixBase() final = default;
-
- private:
-  inline static constexpr const char message_[] = "std::vector used for Matrix construction is invalid";
 };
 
-class InvalidMatrixOperation final : public MachineError {
+class InvalidMatrixOperation final : public MachineError<InvalidMatrixOperation> {
  public:
-  InvalidMatrixOperation() {
-    message_ptr = message_;
+  InvalidMatrixOperation() : MachineError("The requested operation cannot be performed on provided matrixes") {
   }
-  ~InvalidMatrixOperation() final = default;
-
- private:
-  inline static constexpr const char message_[] = "The requested operation cannot be performed on provided matrixes";
 };
 
-class InvalidMatrixString final : public MachineError {
+class InvalidMatrixString final : public MachineError<InvalidMatrixString> {
  public:
-  InvalidMatrixString() {
-    message_ptr = message_;
+  InvalidMatrixString() : MachineError("String used for Matrix construction is invalid") {
   }
-  ~InvalidMatrixString() final = default;
-
- private:
-  inline static constexpr const char message_[] = "String used for Matrix construction is invalid";
 };
 
 template <class T>

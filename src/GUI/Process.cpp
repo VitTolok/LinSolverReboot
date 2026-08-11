@@ -3,6 +3,7 @@
 #include "TestSolver.hpp"
 #include "MatAriSolver.hpp"
 #include "Interface.hpp"
+#include "definitions.hpp"
 #include "ui_Process.h"
 
 ProgressReport::ProgressReport(Interface &interface)
@@ -44,7 +45,7 @@ bool ProgressReport::Active() const {
   return active_;
 }
 
-void ProgressReport::SetSolver(Solver *solver, const Solvable *solvable) {
+void ProgressReport::SetSolver(ISolver *solver, const Solvable *solvable) {
   solver_ = solver;
   solvable_ = solvable;
 }
@@ -55,22 +56,22 @@ void ProgressReport::Execute() {
   }
   try {
     (*solver_)(*solvable_);
-  } catch (MachineError &exception) {
+  } catch (IMachineError &exception) {
     solver_->Terminate(std::move(exception));
   } catch (...) {
-    solver_->Terminate(MachineError{});
+    solver_->Terminate(UnknownMachineError{});
   }
   emit EndThread();
 }
 
-void Finisher(Process &process, Solution &&solution) {
+void Finisher(Process &process, ISolution &&solution) {
   *process.progress_ = 100;
   std::lock_guard lock(process.mutex_);
   process.solution_ = solution.Detach();
   process.end_ = std::chrono::steady_clock::now();
   process.ui_->status->setText("Finished.");
 }
-void Terminator(Process &process, MachineError &&exception) {
+void Terminator(Process &process, IMachineError &&exception) {
   if (dynamic_cast<const TerminationBreak *>(&exception)) {
     return;
   }
@@ -97,18 +98,18 @@ Process::Process(ProcType proc_type, std::unique_ptr<Solvable> &&solvable, Inter
   switch (proc_type) {
     case ProcType::kTestProc:
       solver_ = std::make_unique<TestSolver>(
-          *progress_, [this](Solution &&s) -> void { Finisher(*this, std::move(s)); },
-          [this](MachineError &&e) -> void { Terminator(*this, std::move(e)); });
+          *progress_, [this](ISolution &&s) -> void { Finisher(*this, std::move(s)); },
+          [this](IMachineError &&e) -> void { Terminator(*this, std::move(e)); });
       break;
     case ProcType::kMatAriProc:
       solver_ = std::make_unique<MatAriSolver>(
-          *progress_, [this](Solution &&s) -> void { Finisher(*this, std::move(s)); },
-          [this](MachineError &&e) -> void { Terminator(*this, std::move(e)); });
+          *progress_, [this](ISolution &&s) -> void { Finisher(*this, std::move(s)); },
+          [this](IMachineError &&e) -> void { Terminator(*this, std::move(e)); });
       break;
     case ProcType::kDecompProc:
       solver_ = MakeDecompSolver(
-          *progress_, [this](Solution &&solution) -> void { Finisher(*this, std::move(solution)); },
-          [this](MachineError &&error) -> void { Terminator(*this, std::move(error)); }, *solvable_);
+          *progress_, [this](ISolution &&solution) -> void { Finisher(*this, std::move(solution)); },
+          [this](IMachineError &&error) -> void { Terminator(*this, std::move(error)); }, *solvable_);
       break;
   }
   ui_ = new Ui::Process;

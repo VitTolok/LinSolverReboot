@@ -1,5 +1,6 @@
 #pragma once
 #include "Solver.hpp"
+#include "definitions.hpp"
 #include <thread>
 
 struct TestSolvable : public Solvable {
@@ -10,25 +11,25 @@ struct TestSolvable : public Solvable {
   }
 };
 
-struct TestSolution : public Solution {
+struct TestSolution : public ISolution {
   std::string result;
   explicit TestSolution(const std::string &string) : result(string) {
   }
-  virtual std::unique_ptr<Solution> Detach() override {
+  std::unique_ptr<ISolution> Detach() override {
     return std::make_unique<TestSolution>(std::move(*this));
   }
   ~TestSolution() override {
   }
 };
 
-class TestSolver : public Solver {
+class TestSolver : public ISolver {
  public:
-  TestSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
-             const std::function<void(MachineError &&)> &terminator)
-      : Solver(progress, finisher, terminator) {
+  TestSolver(IProgress &progress, const std::function<void(ISolution &&)> &finisher,
+             const std::function<void(IMachineError &&)> &terminator)
+      : ISolver(progress, finisher, terminator) {
   }
 
-  virtual void operator()(const Solvable &solvable) const override {
+  void operator()(const Solvable &solvable) const override {
     auto input = dynamic_cast<const TestSolvable *>(&solvable);
     if (input == nullptr) {
       Terminate(InvalidSolutionType{});
@@ -39,17 +40,16 @@ class TestSolver : public Solver {
         Finish(TestSolution("zero"));
         break;
       case 1:
-        for (size_t prog = 0; prog < 100; prog++) {
+        for (int16_t prog = 0; prog < 100; prog++) {
           std::this_thread::sleep_for(std::chrono::milliseconds(100));
           progress_ = prog;
         }
         Finish(TestSolution("one"));
         break;
       default:
-        Terminate(MachineError{});
+        Terminate(UnknownMachineError{});
     }
   }
 
-  ~TestSolver() override {
-  }
+  ~TestSolver() override = default;
 };

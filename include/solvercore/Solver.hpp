@@ -3,58 +3,49 @@
 #include <cstdint>
 #include <functional>
 
-class InvalidSolutionType final : public MachineError {
+class InvalidSolutionType final : public MachineError<InvalidSolutionType> {
  public:
-  InvalidSolutionType() {
-    message_ptr = message_;
+  InvalidSolutionType() : MachineError("Solver received input of the wrong type") {
   }
-  ~InvalidSolutionType() final = default;
-
- private:
-  inline static constexpr const char message_[] = "Solver received input of the wrong type";
 };
 
 struct Solvable {
-  virtual ~Solvable() {
-  }
+  virtual ~Solvable() = default;
 };
 
-struct Progress {
+struct IProgress {
   virtual void operator=(int16_t) = 0;
-  virtual ~Progress() {
-  }
+  virtual ~IProgress() = default;
 };
 
-struct Solution {
-  virtual std::unique_ptr<Solution> Detach() = 0;
-  virtual ~Solution() {
-  }
+struct ISolution {
+  virtual std::unique_ptr<ISolution> Detach() = 0;
+  virtual ~ISolution() = default;
 };
 
-class Solver {
+class ISolver {
  public:
-  Solver(Progress &progress, const std::function<void(Solution &&)> &finisher,
-         const std::function<void(MachineError &&)> &terminator)
+  ISolver(IProgress &progress, const std::function<void(ISolution &&)> &finisher,
+          const std::function<void(IMachineError &&)> &terminator)
       : progress_(progress), finisher_(finisher), terminator_(terminator) {
   }
   virtual void operator()(const Solvable &) const = 0;
-  virtual ~Solver() {
-  }
+  virtual ~ISolver() = default;
 
-  void Terminate(MachineError &&exception) const {
+  void Terminate(IMachineError &&exception) const {
     terminator_(std::move(exception));
   }
 
-  void Finish(Solution &&solution) const {
+  void Finish(ISolution &&solution) const {
     finisher_(std::move(solution));
   }
 
  protected:
-  Progress &progress_;
+  IProgress &progress_;
 
  private:
-  std::function<void(Solution &&)> finisher_;
-  std::function<void(MachineError &&)> terminator_;
+  std::function<void(ISolution &&)> finisher_;
+  std::function<void(IMachineError &&)> terminator_;
 };
 
 enum class NumericType { kLongDouble, kRational };

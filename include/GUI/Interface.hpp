@@ -8,7 +8,11 @@
 #include <mutex>
 #include "Process.hpp"
 
-class WrongInterface : public MachineError {};
+class WrongInterface : public MachineError<WrongInterface> {
+ public:
+  WrongInterface() : MachineError("Wrong Interface") {
+  }
+};
 
 class Interface : public QWidget {
   Q_OBJECT
@@ -20,13 +24,12 @@ class Interface : public QWidget {
   explicit Interface(QWidget *parent = nullptr) : QWidget(parent) {
   }
   virtual void ActivateInProgress(const Solvable &) = 0;
-  virtual void ActivateSuccess(const Solvable &, const Solution &) = 0;
-  virtual void ActivateError(const Solvable &, const MachineError &) = 0;
+  virtual void ActivateSuccess(const Solvable &, const ISolution &) = 0;
+  virtual void ActivateError(const Solvable &, const IMachineError &) = 0;
   virtual std::unique_ptr<Process> MakeProcess(QWidget *parent) = 0;
   virtual QPushButton *ExecuteButton() = 0;
   virtual QString Name() const = 0;
-  virtual ~Interface() {
-  }
+  ~Interface() override = default;
 };
 
 inline void ChoiceBoxFillNumeric(QComboBox *ptr) {

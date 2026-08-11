@@ -32,19 +32,19 @@ void MatAriInterface::ActivateInProgress(const Solvable &solvable) {
   ui_->status->setText("In Progress...");
 }
 
-void MatAriInterface::ActivateSuccess(const Solvable &solvable, const Solution &solution) {
+void MatAriInterface::ActivateSuccess(const Solvable &solvable, const ISolution &solution) {
   auto ptr = dynamic_cast<const MatAriSolutionBase *>(&solution);
   if (ptr == nullptr) {
     throw WrongInterface{};
   }
   ActivateInProgress(solvable);
   ui_->text_browser_result->setPlainText(QString::fromStdString(ptr->Print()));
-  ui_->result_type_label->setText(QString::fromStdString(ptr->TypeName()));
+  ui_->result_type_label->setText((ptr->TypeName()).data());
   ui_->status->setText("Finished");
 }
-void MatAriInterface::ActivateError(const Solvable &solvable, const MachineError &error) {
+void MatAriInterface::ActivateError(const Solvable &solvable, const IMachineError &error) {
   ActivateInProgress(solvable);
-  ui_->status->setText(QString("Error: ").append(typeid(error).name()).append(' ').append(error.what()));
+  ui_->status->setText(QString("Error: ").append(error.ErrorName()).append(' ').append(error.what()));
   ui_->text_browser_result->setText("Error");
 }
 std::unique_ptr<Process> MatAriInterface::MakeProcess(QWidget *parent) {

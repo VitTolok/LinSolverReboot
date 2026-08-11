@@ -66,7 +66,7 @@ struct Decompose {
       }
       cur_row++;
       if (progress) {
-        (*progress) = 100 * (col + 1) / simple.Cols();
+        (*progress) = static_cast<uint16_t>(100 * (col + 1) / simple.Cols());
       }
     }
   }

@@ -23,37 +23,22 @@ std::uint64_t consteval operator""_uint64(unsigned long long number) {
   return static_cast<std::uint64_t>(number);
 }
 
-class UBigIntUnderflow final : public MachineError {
+class UBigIntUnderflow final : public MachineError<UBigIntUnderflow> {
  public:
-  UBigIntUnderflow() {
-    message_ptr = kMessage;
+  UBigIntUnderflow() : MachineError("The unsigned big integer cannot go negative") {
   }
-  ~UBigIntUnderflow() final = default;
-
- private:
-  constexpr inline static char kMessage[] = "The unsigned big integer cannot go negative";
 };
 
-class BigIntInvalidString final : public MachineError {
+class BigIntInvalidString final : public MachineError<BigIntInvalidString> {
  public:
-  BigIntInvalidString() {
-    message_ptr = kMessage;
+  BigIntInvalidString() : MachineError("Use either full integers or '1.01612e288' form") {
   }
-  ~BigIntInvalidString() final = default;
-
- private:
-  constexpr inline static char kMessage[] = "Use either full integers or '1.01612e288' form";
 };
 
-class BigIntDivisionByZero final : public MachineError {
+class BigIntDivisionByZero final : public MachineError<BigIntDivisionByZero> {
  public:
-  BigIntDivisionByZero() {
-    message_ptr = kMessage;
+  BigIntDivisionByZero() : MachineError("Can't divide by 0") {
   }
-  ~BigIntDivisionByZero() final = default;
-
- private:
-  constexpr inline static char kMessage[] = "Can't divide by 0";
 };
 
 class UBigInt {
@@ -946,6 +931,7 @@ constexpr inline UBigInt &operator>>=(UBigInt &bigint, size_t shift) noexcept {
     }
     return result;
   }
+  std::unreachable();
 }
 
 [[nodiscard]] constexpr inline UBigInt GCD(const UBigInt &first, const UBigInt &second) {

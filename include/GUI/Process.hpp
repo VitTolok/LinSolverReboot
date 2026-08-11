@@ -1,5 +1,6 @@
 #pragma once
 #include "Solver.hpp"
+#include "definitions.hpp"
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QProgressBar>
 #include <mutex>
@@ -10,21 +11,24 @@ class Process;
 
 class Interface;
 
-class TerminationBreak : public MachineError {};
+class TerminationBreak : public MachineError<TerminationBreak> {
+ public:
+  TerminationBreak() : MachineError("Process Terminated") {
+  }
+};
 
-struct ProgressReport : public QObject, public Progress {
+struct ProgressReport : public QObject, public IProgress {
   Q_OBJECT
  public:
-  ProgressReport(Interface &);
+  explicit ProgressReport(Interface &);
   void operator=(int16_t) override;
   void Report();
   bool Active() const;
   void ReportToInterface();
   void ReleaseInterface();
   void Terminate();
-  ~ProgressReport() override {
-  }
-  void SetSolver(Solver *, const Solvable *);
+  ~ProgressReport() override = default;
+  void SetSolver(ISolver *, const Solvable *);
 
  public slots:
   void Execute();
@@ -38,7 +42,7 @@ struct ProgressReport : public QObject, public Progress {
   bool terminate_signal_;
   bool active_;
   Interface &interface_;
-  Solver *solver_;
+  ISolver *solver_;
   const Solvable *solvable_;
   std::mutex mutex_;
 };
@@ -63,14 +67,14 @@ class Process : public QWidget {
   Interface &interface_;
   Ui::Process *ui_;
   QThread *thread_;
-  std::unique_ptr<Solver> solver_;
+  std::unique_ptr<ISolver> solver_;
   std::chrono::steady_clock::time_point start_;
   std::chrono::steady_clock::time_point end_;
   std::unique_ptr<ProgressReport> progress_;
-  std::unique_ptr<MachineError> error_;
-  std::unique_ptr<Solution> solution_;
+  std::unique_ptr<IMachineError> error_;
+  std::unique_ptr<ISolution> solution_;
   std::mutex mutex_;
 
-  friend void Finisher(Process &process, Solution &&solution);
-  friend void Terminator(Process &process, MachineError &&solution);
+  friend void Finisher(Process &process, ISolution &&solution);
+  friend void Terminator(Process &process, IMachineError &&solution);
 };

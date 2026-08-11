@@ -42,7 +42,7 @@ void PrintSolution(Ui::DecompInterface *ui, const DecompSolution<Numeric> &sol) 
   ui->upper_text_browser->setPlainText(QString::fromStdString(sol.upper));
 }
 
-void DecompInterface::ActivateSuccess(const Solvable &solvable, const Solution &solution) {
+void DecompInterface::ActivateSuccess(const Solvable &solvable, const ISolution &solution) {
   auto ptr = dynamic_cast<const DecompSolvable *>(&solvable);
   if (ptr == nullptr) {
     throw WrongInterface{};
@@ -65,9 +65,9 @@ void DecompInterface::ActivateSuccess(const Solvable &solvable, const Solution &
   ui_->status->setText("Finished.");
 }
 
-void DecompInterface::ActivateError(const Solvable &solvable, const MachineError &error) {
+void DecompInterface::ActivateError(const Solvable &solvable, const IMachineError &error) {
   ActivateInProgress(solvable);
-  ui_->status->setText(QString::fromStdString(std::string("Error: ") + typeid(error).name() + ": " + error.what()));
+  ui_->status->setText(QString::fromStdString(std::string("Error: ") + error.ErrorName() + ": " + error.what()));
 }
 
 std::unique_ptr<Process> DecompInterface::MakeProcess(QWidget *parent) {

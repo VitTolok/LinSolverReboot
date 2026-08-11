@@ -2,6 +2,7 @@
 #include "matrix.hpp"
 #include "Solver.hpp"
 #include <sstream>
+#include <meta>
 
 struct MatAriSolvable final : public Solvable {
   std::string first;
@@ -22,34 +23,35 @@ struct MatAriSolvable final : public Solvable {
   ~MatAriSolvable() final = default;
 };
 
-struct MatAriSolutionBase : public Solution {
+struct MatAriSolutionBase : public ISolution {
   ~MatAriSolutionBase() override {};
   virtual std::string Print() const = 0;
-  virtual std::string TypeName() const = 0;
+  virtual std::string_view TypeName() const = 0;
 };
 
 template <class Numeric>
 struct MatAriSolution final : public MatAriSolutionBase {
+  static constexpr auto kTypeName = std::define_static_string(std::meta::display_string_of(^^Numeric));
   MatAriSolution(Matrix<Numeric> &&result) : result(std::move(result)) {
   }
   Matrix<Numeric> result;
   std::string Print() const override {
     return (std::ostringstream() << result).str();
   }
-  std::string TypeName() const override {
-    return typeid(Numeric).name();
+  std::string_view TypeName() const override {
+    return kTypeName;
   }
-  std::unique_ptr<Solution> Detach() final {
+  std::unique_ptr<ISolution> Detach() final {
     return std::make_unique<MatAriSolution<Numeric>>(std::move(*this));
   }
   ~MatAriSolution() final = default;
 };
 
-class MatAriSolver final : public Solver {
+class MatAriSolver final : public ISolver {
  public:
-  MatAriSolver(Progress &progress, const std::function<void(Solution &&)> &finisher,
-               const std::function<void(MachineError &&)> &terminator)
-      : Solver(progress, finisher, terminator) {
+  MatAriSolver(IProgress &progress, const std::function<void(ISolution &&)> &finisher,
+               const std::function<void(IMachineError &&)> &terminator)
+      : ISolver(progress, finisher, terminator) {
   }
   void operator()(const Solvable &) const override;
   ~MatAriSolver() final = default;

@@ -8,24 +8,16 @@
 #include <compare>
 #include <type_traits>
 
-class InvalidRational : public MachineError {
+class InvalidRational : public MachineError<InvalidRational> {
  public:
-  InvalidRational() {
-    message_ptr = kMessage;
+  InvalidRational() : MachineError("Denominator can't be 0") {
   }
-
- private:
-  constexpr inline static char kMessage[] = "Denominator can't be 0";
 };
 
-class InvalidRationalString : public MachineError {
+class InvalidRationalString : public MachineError<InvalidRationalString> {
  public:
-  InvalidRationalString() {
-    message_ptr = kMessage;
+  InvalidRationalString() : MachineError("Invalid Rational String") {
   }
-
- private:
-  constexpr inline static char kMessage[] = "Invalid Rational String";
 };
 
 class Rational;
@@ -421,6 +413,12 @@ constexpr inline char *Rational::ToString(char *const start, const size_t size) 
     {
       char result[10]{};
       auto num_ptr = num_.ToString(result, 7);
+      if (den_ == 1) {
+        for (size_t i = 0; result + i < num_ptr; i++) {
+          start[i] = result[i];
+        }
+        return start + (num_ptr - result);
+      }
       *num_ptr = '/';
       num_ptr++;
       auto den_ptr = den_.ToString(num_ptr, static_cast<size_t>((result + 10) - num_ptr));

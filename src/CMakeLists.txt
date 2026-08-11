@@ -1,4 +1,3 @@
-add_subdirectory(numeric)
 add_subdirectory(solvercore)
 add_subdirectory(GUI)
 

@@ -54,7 +54,9 @@ add_library(MatAriInterface STATIC
 
 target_link_libraries(DecompInterface PUBLIC
   interface_core
+  Rational
 )
 target_link_libraries(MatAriInterface PUBLIC
   interface_core
+  Rational
 )

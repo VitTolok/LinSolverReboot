@@ -5,28 +5,47 @@
 #include <cstdint>
 #include <exception>
 #include <memory>
+#include <type_traits>
+#include <meta>
 
-class MachineError : public std::exception {
+class IMachineError : public std::exception {
  public:
-  MachineError() : message_ptr(kMessage) {
+  IMachineError() : message_ptr(kMessage) {
   }
+  ~IMachineError() override = default;
 
   [[nodiscard]] const char *what() const noexcept final {
     return message_ptr;
   }
-
-  virtual std::unique_ptr<MachineError> Detach() {
-    return std::make_unique<MachineError>(std::move<MachineError &>(*this));
-  }
-
-  ~MachineError() override = default;
+  virtual const char *ErrorName() const noexcept = 0;
+  virtual std::unique_ptr<IMachineError> Detach() = 0;
 
  protected:
   const char *message_ptr;
-
- private:
-  inline static constexpr char kMessage[] = "Unknown Machine Error";
+  static inline constexpr auto kMessage = "Unknown Error";
 };
+
+template <class DerivedError>
+class MachineError : public IMachineError {
+ public:
+  MachineError() : MachineError(kMessage) {
+  }
+  ~MachineError() override = default;
+  const char *ErrorName() const noexcept final {
+    static constexpr auto kErrorName = std::define_static_string(std::meta::identifier_of(^^DerivedError));
+    return kErrorName;
+  }
+  std::unique_ptr<IMachineError> Detach() final {
+    return std::make_unique<DerivedError>(std::move(*static_cast<DerivedError *>(this)));
+  }
+
+ protected:
+  explicit MachineError(const char *message) : IMachineError() {
+    message_ptr = message;
+  }
+};
+
+class UnknownMachineError final : public MachineError<UnknownMachineError> {};
 
 template <typename T>
   requires requires(const T &v) {
