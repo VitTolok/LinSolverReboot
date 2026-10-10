@@ -110,7 +110,7 @@ TEST_F(IDequeComparisonTests, DequeComparisonTest) {
           ASSERT_THROW(std::as_const(car).At(0), std::out_of_range);
           break;
         }
-        index = dist(rng) % deq.size();
+        index = static_cast<uint8_t>(dist(rng) % deq.size());
         dvalue = std::as_const(deq).at(index);
         cvalue = std::as_const(car).At(index);
         break;
@@ -120,7 +120,7 @@ TEST_F(IDequeComparisonTests, DequeComparisonTest) {
           break;
         }
         dvalue = dist(rng);
-        index = dist(rng) % deq.size();
+        index = static_cast<uint8_t>(dist(rng) % deq.size());
         deq.at(index) = dvalue;
         cvalue = (car.At(index) = dvalue);
         break;

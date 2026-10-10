@@ -20,12 +20,12 @@ class CircleArr {
     Reserve(capacity);
   }
   constexpr CircleArr(SizeT capacity, const Stored &value) : CircleArr(capacity) {
-    for (SizeT i = 0; i < capacity_; i++) {
+    while (size_ < capacity_) {
       PushBack(value);
     }
   }
   constexpr CircleArr(SizeT capacity, Stored &&value) : CircleArr(capacity) {
-    for (SizeT i = 0; i + 1 < capacity_; i++) {
+    while (size_ + 1 < capacity_) {
       PushBack(value);
     }
     if (capacity_ > 0) [[likely]] {
@@ -48,8 +48,8 @@ class CircleArr {
   }
 
   constexpr CircleArr(const CircleArr &other) : CircleArr(other.size_) {
-    for (SizeT i = 0; i < other.size_; i++) {
-      PushBack(other[i]);
+    while (size_ < other.size_) {
+      PushBack(other[size_]);
     }
   }
   constexpr CircleArr(CircleArr &&other) noexcept
@@ -67,8 +67,8 @@ class CircleArr {
     }
     Clear();
     Reserve(other.size_);
-    for (SizeT i = 0; i < other.size_; i++) {
-      PushBack(other[i]);
+    while (size_ < other.size_) {
+      PushBack(other[size_]);
     }
     return *this;
   }
@@ -87,23 +87,11 @@ class CircleArr {
 
   constexpr Stored &operator[](SizeT pos) noexcept {
     CapacityGuarantees();
-    if (pos < capacity_) {
-      if (begin_ + pos < capacity_) {
-        return storage_[begin_ + pos];
-      }
-      return storage_[begin_ + pos - capacity_];
-    }
-    std::unreachable();
+    return *GetPosition(pos);
   }
   constexpr const Stored &operator[](SizeT pos) const noexcept {
     CapacityGuarantees();
-    if (pos < capacity_) {
-      if (begin_ + pos < capacity_) {
-        return storage_[begin_ + pos];
-      }
-      return storage_[begin_ + pos - capacity_];
-    }
-    std::unreachable();
+    return *GetPosition(pos);
   }
 
   constexpr Stored &At(SizeT pos) {
@@ -141,14 +129,14 @@ class CircleArr {
   constexpr CircleArr &PushBack(const Stored &value) {
     ValidStateGuarantees();
     ExpandIfFull();
-    std::construct_at(&((*this)[size_]), value);
+    std::construct_at(GetPosition(size_), value);
     size_++;
     return *this;
   }
   constexpr CircleArr &PushBack(Stored &&value) {
     ValidStateGuarantees();
     ExpandIfFull();
-    std::construct_at(&((*this)[size_]), std::move(value));
+    std::construct_at(GetPosition(size_), std::move(value));
     size_++;
     return *this;
   }
@@ -156,14 +144,14 @@ class CircleArr {
   constexpr CircleArr &EmplaceBack(Args &&...args) {
     ValidStateGuarantees();
     ExpandIfFull();
-    std::construct_at(&((*this)[size_]), std::forward<Args>(args)...);
+    std::construct_at(GetPosition(size_), std::forward<Args>(args)...);
     size_++;
     return *this;
   }
   constexpr CircleArr &PushFront(const Stored &value) {
     ValidStateGuarantees();
     ExpandIfFull();
-    std::construct_at(&((*this)[capacity_ - 1]), value);
+    std::construct_at(GetPosition(capacity_ - 1), value);
     begin_ = begin_ == 0 ? capacity_ - 1 : begin_ - 1;
     size_++;
     return *this;
@@ -171,7 +159,7 @@ class CircleArr {
   constexpr CircleArr &PushFront(Stored &&value) {
     ValidStateGuarantees();
     ExpandIfFull();
-    std::construct_at(&((*this)[capacity_ - 1]), std::move(value));
+    std::construct_at(GetPosition(capacity_ - 1), std::move(value));
     begin_ = begin_ == 0 ? capacity_ - 1 : begin_ - 1;
     size_++;
     return *this;
@@ -180,7 +168,7 @@ class CircleArr {
   constexpr CircleArr &EmplaceFront(Args &&...args) {
     ValidStateGuarantees();
     ExpandIfFull();
-    std::construct_at(&((*this)[capacity_ - 1]), std::forward<Args>(args)...);
+    std::construct_at(GetPosition(capacity_ - 1), std::forward<Args>(args)...);
     begin_ = begin_ == 0 ? capacity_ - 1 : begin_ - 1;
     size_++;
     return *this;
@@ -450,5 +438,25 @@ class CircleArr {
     if (size_ == 0) {
       std::unreachable();
     }
+  }
+  constexpr Stored *GetPosition(size_t index) noexcept {
+    CapacityGuarantees();
+    if (index >= capacity_) {
+      std::unreachable();
+    }
+    if (begin_ + index < capacity_) {
+      return storage_ + begin_ + index;
+    }
+    return storage_ + begin_ + index - capacity_;
+  }
+  constexpr const Stored *GetPosition(size_t index) const noexcept {
+    CapacityGuarantees();
+    if (index >= capacity_) {
+      std::unreachable();
+    }
+    if (begin_ + index < capacity_) {
+      return storage_ + begin_ + index;
+    }
+    return storage_ + begin_ + index - capacity_;
   }
 };
